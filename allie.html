@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Allie — Coach Checklist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body>
+  <div id="config-warning" class="banner banner-warn" hidden>
+    Supabase is not configured yet. Edit <code>js/config.js</code> with your project URL and anon key.
+  </div>
+
+  <header class="topbar">
+    <a href="index.html" class="back-link">&larr; All coaches</a>
+    <div id="session-info" class="session-info" hidden>
+      <span id="user-email"></span>
+      <button id="logout-btn" class="btn btn-ghost">Log out</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="auth-panel" class="panel">
+      <h2>Coach Login</h2>
+
+      <form id="password-form">
+        <label>
+          Email
+          <input type="email" id="password-email" required autocomplete="email" />
+        </label>
+        <label>
+          Password
+          <input type="password" id="password-password" required autocomplete="current-password" />
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Log In</button>
+          <button type="button" id="signup-btn" class="btn btn-secondary">Sign Up</button>
+        </div>
+        <p id="password-message" class="form-message"></p>
+      </form>
+    </section>
+
+    <section id="app-panel" hidden>
+      <div id="coach-dashboard">
+        <div class="coach-header">
+          <span id="coach-badge" class="badge"></span>
+          <div>
+            <h1 id="coach-name"></h1>
+            <p class="coach-tagline">Daily recruiting outreach</p>
+          </div>
+        </div>
+
+        <div class="coach-layout">
+          <div class="calendar-panel">
+            <div class="calendar-toolbar">
+              <p id="calendar-period-label" class="calendar-period-label"></p>
+              <div class="calendar-controls">
+                <div class="view-switch" id="view-switch">
+                  <button type="button" class="view-btn" data-view="3day">3 day</button>
+                  <button type="button" class="view-btn" data-view="5day">5 day</button>
+                  <button type="button" class="view-btn" data-view="month">Month</button>
+                </div>
+                <button type="button" id="cal-prev" class="cal-nav-btn" aria-label="Previous period">&lsaquo;</button>
+                <button type="button" id="cal-today" class="cal-today-btn">Today</button>
+                <button type="button" id="cal-next" class="cal-nav-btn" aria-label="Next period">&rsaquo;</button>
+              </div>
+            </div>
+            <div id="calendar-body"></div>
+            <div class="calendar-legend">
+              <span><span class="legend-swatch hit"></span>Hit goal</span>
+              <span><span class="legend-swatch missed"></span>Missed</span>
+              <span><span class="legend-swatch today"></span>Today</span>
+            </div>
+          </div>
+
+          <div class="recruits-panel">
+            <h2>Today</h2>
+            <p id="recruits-summary" class="recruits-summary"></p>
+            <div id="recruits-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/mock-data.js"></script>
+  <script>window.COACH_ID = "allie";</script>
+  <script src="js/auth.js"></script>
+  <script src="js/coach-dashboard.js"></script>
+</body>
+</html>

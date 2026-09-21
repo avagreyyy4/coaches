@@ -1,0 +1,37 @@
+name: Staff Calendar Sync (Supabase)
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # every 6 hours
+  workflow_dispatch:
+
+concurrency:
+  group: staff-calendar-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps
+        working-directory: scripts
+        run: |
+          python -m pip install --upgrade pip
+          pip install supabase python-dotenv requests icalendar recurring-ical-events
+
+      - name: Sync staff calendar
+        working-directory: scripts
+        env:
+          STAFF_CALENDAR_ICAL_URL: ${{ secrets.STAFF_CALENDAR_ICAL_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python fetch_calendar.py

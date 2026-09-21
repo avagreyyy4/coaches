@@ -1,0 +1,7 @@
+.DS_Store
+node_modules/
+.env
+scripts/.env
+scripts/.exports_cache.json
+scripts/__pycache__/
+scripts/.venv/

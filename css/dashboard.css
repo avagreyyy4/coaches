@@ -1,0 +1,348 @@
+/* ---- Shared: monogram badge ---- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  background: var(--navy);
+  color: var(--white);
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+/* ---- Home: coach cards ---- */
+.section-heading {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  margin-bottom: 1.25rem;
+}
+
+.coach-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+@media (max-width: 760px) {
+  .coach-grid { grid-template-columns: 1fr; }
+}
+
+.coach-card {
+  display: block;
+  text-decoration: none;
+  background: var(--white);
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-card);
+  padding: 1.6rem 1.6rem 1.4rem;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+.coach-card:hover {
+  border-color: var(--navy);
+  transform: translateY(-1px);
+}
+
+.coach-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 1.4rem;
+}
+.coach-card-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--navy);
+}
+
+.coach-card-ratio {
+  display: flex;
+  align-items: baseline;
+  gap: 0.2rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.coach-card-ratio .done { font-size: 2.75rem; color: var(--navy); }
+.coach-card-ratio .sep,
+.coach-card-ratio .goal { font-size: 1.4rem; color: var(--gray-500); font-weight: 600; }
+
+.coach-card-label {
+  margin-top: 0.55rem;
+  color: var(--gray-500);
+  font-size: 0.85rem;
+}
+
+.coach-card-note {
+  margin-top: 0.85rem;
+  font-size: 0.78rem;
+  color: var(--gray-500);
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--gray-100);
+}
+
+/* ---- Coach page ---- */
+.coach-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 2rem;
+}
+.coach-header h1 {
+  font-weight: 700;
+  font-size: 1.6rem;
+  color: var(--navy);
+}
+.coach-header .coach-tagline {
+  color: var(--gray-500);
+  font-size: 0.9rem;
+  margin-top: 0.1rem;
+}
+
+.coach-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.75rem;
+  align-items: start;
+}
+@media (max-width: 820px) {
+  .coach-layout { grid-template-columns: 1fr; }
+}
+
+.calendar-panel,
+.recruits-panel {
+  background: var(--white);
+  border: 1px solid var(--gray-100);
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+
+.recruits-panel h2 {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--navy);
+  margin-bottom: 1.1rem;
+}
+
+/* Calendar toolbar */
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-bottom: 1.15rem;
+}
+.calendar-period-label {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--navy);
+}
+.calendar-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.view-switch {
+  display: flex;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-right: 0.3rem;
+}
+.view-btn {
+  background: var(--white);
+  border: none;
+  border-left: 1px solid var(--gray-100);
+  color: var(--gray-500);
+  font-family: var(--font);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.4rem 0.65rem;
+  cursor: pointer;
+}
+.view-btn:first-child { border-left: none; }
+.view-btn:hover:not(.active) { color: var(--navy); }
+.view-btn.active { background: var(--navy); color: var(--white); }
+
+.cal-nav-btn,
+.cal-today-btn {
+  background: var(--white);
+  border: 1px solid var(--gray-100);
+  color: var(--gray-900);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cal-nav-btn {
+  width: 1.85rem;
+  height: 1.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: 0;
+}
+.cal-today-btn { padding: 0.4rem 0.65rem; }
+.cal-nav-btn:hover,
+.cal-today-btn:hover { border-color: var(--navy); color: var(--navy); }
+
+/* Day-row view (3-day / 5-day) */
+.calendar-days-row {
+  display: grid;
+  gap: 0.6rem;
+}
+.calendar-days-row[data-count="3"] { grid-template-columns: repeat(3, 1fr); }
+.calendar-days-row[data-count="5"] { grid-template-columns: repeat(5, 1fr); }
+
+.day-card {
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem 0.75rem;
+  min-height: 6.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.day-card-weekday {
+  font-size: 0.72rem;
+  color: var(--gray-500);
+  font-weight: 500;
+}
+.day-card-date {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-top: 0.1rem;
+  font-variant-numeric: tabular-nums;
+}
+.day-card-stat {
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-top: 0.6rem;
+  color: var(--gray-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.day-card.hit { background: var(--navy); border-color: var(--navy); }
+.day-card.hit .day-card-weekday,
+.day-card.hit .day-card-date,
+.day-card.hit .day-card-stat { color: var(--white); }
+
+.day-card.missed { border: 1.5px solid var(--navy); }
+
+.day-card.today { background: var(--columbia-blue); border-color: var(--columbia-blue); }
+.day-card.today .day-card-weekday { color: var(--navy); }
+.day-card.today .day-card-date { color: var(--navy); }
+.day-card.today .day-card-stat { color: var(--navy); }
+
+.day-card.future .day-card-date { color: var(--gray-500); }
+
+/* Month view */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+}
+.calendar-weekday {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--gray-500);
+  padding-bottom: 0.3rem;
+  font-weight: 500;
+}
+.calendar-day {
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  background: var(--white);
+  font-variant-numeric: tabular-nums;
+}
+.calendar-day.empty { border: none; background: transparent; }
+
+.calendar-day.hit {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--white);
+  font-weight: 700;
+}
+.calendar-day.missed {
+  background: var(--white);
+  border: 1.5px solid var(--navy);
+  color: var(--gray-900);
+  font-weight: 600;
+}
+.calendar-day.today {
+  background: var(--columbia-blue);
+  border-color: var(--columbia-blue);
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.calendar-legend {
+  display: flex;
+  gap: 1.4rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gray-100);
+  font-size: 0.78rem;
+  color: var(--gray-500);
+}
+.calendar-legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+  border: 1px solid var(--gray-100);
+}
+.legend-swatch.hit { background: var(--navy); border-color: var(--navy); }
+.legend-swatch.missed { background: var(--white); border: 1.5px solid var(--navy); }
+.legend-swatch.today { background: var(--columbia-blue); border-color: var(--columbia-blue); }
+
+/* Recruit list */
+.recruits-summary {
+  color: var(--gray-900);
+  font-size: 0.9rem;
+  margin: -0.5rem 0 1.1rem;
+}
+.recruits-summary strong { color: var(--navy); font-weight: 700; }
+
+.recruit-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.75rem 0.1rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+.recruit-row:last-child { border-bottom: none; }
+
+.recruit-row input[type="checkbox"] {
+  margin-top: 0.2rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--navy);
+  cursor: pointer;
+}
+
+.recruit-info { flex: 1; }
+.recruit-name { font-size: 0.95rem; font-weight: 500; color: var(--gray-900); }
+.recruit-missing { font-size: 0.78rem; color: var(--gray-500); margin-top: 0.2rem; }
+.recruit-missing-label { color: var(--navy); font-weight: 700; }
+
+.recruit-row.done .recruit-name {
+  color: var(--gray-500);
+  text-decoration: line-through;
+  font-weight: 400;
+}

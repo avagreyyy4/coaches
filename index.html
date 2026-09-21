@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Coach Checklist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body>
+  <div id="config-warning" class="banner banner-warn" hidden>
+    Supabase is not configured yet. Edit <code>js/config.js</code> with your project URL and anon key.
+  </div>
+
+  <header class="topbar">
+    <span class="brand-mark">Coach Checklist</span>
+    <div id="session-info" class="session-info" hidden>
+      <span id="user-email"></span>
+      <button id="logout-btn" class="btn btn-ghost">Log out</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Auth panel: shown when logged out -->
+    <section id="auth-panel" class="panel">
+      <h2>Coach Login</h2>
+
+      <form id="password-form">
+        <label>
+          Email
+          <input type="email" id="password-email" required autocomplete="email" />
+        </label>
+        <label>
+          Password
+          <input type="password" id="password-password" required autocomplete="current-password" />
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Log In</button>
+          <button type="button" id="signup-btn" class="btn btn-secondary">Sign Up</button>
+        </div>
+        <p id="password-message" class="form-message"></p>
+      </form>
+    </section>
+
+    <!-- App panel: shown when logged in -->
+    <section id="app-panel" hidden>
+      <p class="section-heading">Coaches</p>
+      <div id="coach-grid" class="coach-grid"></div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/mock-data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/home.js"></script>
+</body>
+</html>

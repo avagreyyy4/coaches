@@ -1,0 +1,10 @@
+{
+  "exports": [
+    {
+      "name": "Full_Contact_2028",
+      "label": "Raw_Full_Contact_28",
+      "filters": { "gradYear": { "type": "checkbox", "selector": "2028" } },
+      "export": { "layoutOptionText": "2028 Full Info" }
+    }
+  ]
+}
