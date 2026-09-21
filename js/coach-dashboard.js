@@ -174,14 +174,11 @@
     const summaryEl = document.getElementById("recruits-summary");
     let doneCount = data.todayDone;
 
+    // NOTE: intentionally not touching the calendar's "today" cell here —
+    // that comes from the separate historical mock chain (getCoachDayEntry),
+    // a different number by design from this placeholder 5-player list.
     function updateCounts() {
       summaryEl.innerHTML = `<strong>${doneCount} of ${data.todayTarget}</strong> reached out to today`;
-      // Keep today's calendar cell (if currently visible) in sync too.
-      document.querySelectorAll(".day-card.today .day-card-stat, .calendar-day.today").forEach((el) => {
-        if (el.classList.contains("day-card-stat")) {
-          el.textContent = `${doneCount} of ${data.todayTarget}`;
-        }
-      });
     }
     updateCounts();
 
