@@ -32,7 +32,7 @@ jobs:
         working-directory: scripts
         env:
           GOOGLE_CALENDAR_SA_JSON: ${{ secrets.GOOGLE_CALENDAR_SA_JSON }}
-          STAFF_CALENDAR_ID: ${{ secrets.STAFF_CALENDAR_ID }}
+          CALENDAR_IDS: ${{ secrets.CALENDAR_IDS }} # comma-separated; omit to auto-pull every shared calendar instead
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python fetch_calendar.py

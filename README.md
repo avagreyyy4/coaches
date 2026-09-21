@@ -106,38 +106,50 @@ actually called.
 still placeholder data — wiring them to `player_arms_match` is the next
 step once there's real data to look at.
 
-### Staff calendar sync (`scripts/fetch_calendar.py`)
+### Calendar sync (`scripts/fetch_calendar.py`)
 
-Pulls events from your Google "staff" calendar into a Supabase
-`calendar_events` table (`sql/calendar_events.sql`), so the site can show
-real events instead of relying on Google's own embed widget. Recurring
-events come back pre-expanded into individual instances over a rolling
-window (60 days back, 180 days forward from "today") each time it runs.
+Pulls events from Google Calendar(s) — the "staff" calendar, plus a second
+one to be added later — into a Supabase `calendar_events` table
+(`sql/calendar_events.sql`), so the site can show real events instead of
+relying on Google's own embed widget. Recurring events come back
+pre-expanded into individual instances over a rolling window (60 days
+back, 180 days forward from "today") each time it runs. Each row is
+tagged with which calendar it came from (`calendar_id`/`calendar_name`).
 
-Uses the Calendar API with a service account rather than the calendar's
-iCal link, since that link isn't available here (organization Workspace
+Uses the Calendar API with a service account rather than a calendar's iCal
+link, since that link isn't available here (organization Workspace
 calendar + not the owner). The service account only ever gets **read-only**
-access — both by the Calendar API scope requested
-(`calendar.readonly`) and by the sharing permission the calendar owner
-grants it ("See all event details," not an edit permission) — it cannot
-create, modify, or delete anything on the calendar.
+access — both by the Calendar API scope requested (`calendar.readonly`)
+and by the sharing permission each calendar's owner grants it ("See all
+event details," not an edit permission) — it cannot create, modify, or
+delete anything on any calendar.
+
+Which calendars it reads is controlled explicitly by `CALENDAR_IDS` (a
+comma-separated list) rather than "whatever's shared" — safer and more
+predictable, since it'll never start pulling from some other calendar
+that happens to get shared with the service account later without you
+choosing to add it here.
 
 **Setup:**
 1. In [Google Cloud Console](https://console.cloud.google.com): create/pick
    a project → enable the **Google Calendar API** → **IAM & Admin → Service
    Accounts** → create one (no project role needed) → its **Keys** tab →
    **Add Key → Create new key → JSON**. That downloads the credential file.
-2. Ask whoever owns the "staff" calendar to share it with the service
-   account's email (looks like `xxx@your-project.iam.gserviceaccount.com`),
-   permission **"See all event details"** (view-only).
-3. Get the calendar's **Calendar ID** (Google Calendar → that calendar's
+2. For each calendar (staff + the other one, once you know it): ask its
+   owner to share it with the service account's email (looks like
+   `xxx@your-project.iam.gserviceaccount.com`), permission **"See all event
+   details"** (view-only). Then copy its **Calendar ID** (that calendar's
    settings → Integrate calendar → Calendar ID — not the iCal address).
-4. Run `sql/calendar_events.sql` in the Supabase SQL editor.
-5. Add two secrets to this repo's GitHub Actions secrets: `STAFF_CALENDAR_ID`
-   (from step 3), and `GOOGLE_CALENDAR_SA_JSON` — paste the **entire
-   contents** of the downloaded JSON key file as the value. Never commit
-   that JSON file anywhere in this repo.
-6. `.github/workflows/calendar-sync.yml` runs every 6 hours, or trigger it
+3. Run `sql/calendar_events.sql` in the Supabase SQL editor.
+4. Add secrets to this repo's GitHub Actions secrets:
+   - `GOOGLE_CALENDAR_SA_JSON` — paste the **entire contents** of the
+     downloaded JSON key file. Never commit that JSON file anywhere in
+     this repo.
+   - `CALENDAR_IDS` — both calendar IDs from step 2, comma-separated
+     (e.g. `abc@group.calendar.google.com,def@group.calendar.google.com`).
+     If you already added a `STAFF_CALENDAR_ID` secret from an earlier
+     setup, it's no longer read — replace it with `CALENDAR_IDS`.
+5. `.github/workflows/calendar-sync.yml` runs every 6 hours, or trigger it
    manually from the Actions tab.
 
 Not wired into any page yet — once real rows land in `calendar_events`,
