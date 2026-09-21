@@ -171,8 +171,19 @@
 
   // ---- Recruit list (always today, regardless of calendar view) ----
   function renderRecruits(data) {
-    const summary = document.getElementById("recruits-summary");
-    summary.innerHTML = `<strong>${data.todayDone} of ${data.todayTarget}</strong> reached out to today`;
+    const summaryEl = document.getElementById("recruits-summary");
+    let doneCount = data.todayDone;
+
+    function updateCounts() {
+      summaryEl.innerHTML = `<strong>${doneCount} of ${data.todayTarget}</strong> reached out to today`;
+      // Keep today's calendar cell (if currently visible) in sync too.
+      document.querySelectorAll(".day-card.today .day-card-stat, .calendar-day.today").forEach((el) => {
+        if (el.classList.contains("day-card-stat")) {
+          el.textContent = `${doneCount} of ${data.todayTarget}`;
+        }
+      });
+    }
+    updateCounts();
 
     const list = document.getElementById("recruits-list");
     list.innerHTML = "";
@@ -186,6 +197,9 @@
       checkbox.checked = recruit.done;
       checkbox.addEventListener("change", () => {
         row.classList.toggle("done", checkbox.checked);
+        recruit.done = checkbox.checked;
+        doneCount += checkbox.checked ? 1 : -1;
+        updateCounts();
         // Not wired to Supabase yet — mock data resets on reload.
       });
 
