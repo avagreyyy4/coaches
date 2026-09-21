@@ -92,6 +92,33 @@
   window.isoDate = isoDate;
   window.addDays = addDays;
 
+  // ---- Checked-off state, persisted in localStorage so it carries across
+  // pages (e.g. check a player on a coach's page, see it reflected on that
+  // coach's home-page card too) — still mock/local-only, not Supabase.
+  function doneStorageKey(coachId, todayISO) {
+    return `coach-checklist-done:${coachId}:${todayISO}`;
+  }
+
+  function readDoneOverrides(coachId, todayISO) {
+    try {
+      const raw = localStorage.getItem(doneStorageKey(coachId, todayISO));
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  window.setRecruitDone = function (coachId, index, done) {
+    const todayISO = isoDate(easternToday());
+    const arr = readDoneOverrides(coachId, todayISO);
+    arr[index] = done;
+    try {
+      localStorage.setItem(doneStorageKey(coachId, todayISO), JSON.stringify(arr));
+    } catch (e) {
+      // ignore (e.g. storage disabled/full) — falls back to in-memory only
+    }
+  };
+
   // ---- Per-coach rollover chain, cached per coach ----
   const chainCache = {};
 
@@ -132,23 +159,28 @@
   };
 
   // Today's summary + the list of recruits still to reach out to.
-  // Placeholder: always 0/5, players named generically, each flagged with
-  // whatever info is "missing" until real recruit data is wired in.
+  // Placeholder: base target always 5, players named generically, each
+  // flagged with whatever info is "missing" until real recruit data is
+  // wired in. "done" state per player is read from localStorage so it's
+  // consistent wherever it's shown (this page, the home card, etc.).
   window.getCoachDashboardData = function (coachId) {
     const today = easternToday();
+    const todayISO = isoDate(today);
     const target = 5;
-    const done = 0;
+    const overrides = readDoneOverrides(coachId, todayISO);
 
-    const rand = seededRandom(hashSeed(coachId + "-recruits-" + isoDate(today)));
+    const rand = seededRandom(hashSeed(coachId + "-recruits-" + todayISO));
     const recruits = [];
     for (let i = 0; i < target; i++) {
       recruits.push({
-        id: `${coachId}-${isoDate(today)}-${i}`,
+        id: `${coachId}-${todayISO}-${i}`,
         name: `Player ${i + 1}`,
         missing: missingFieldsFor(rand),
-        done: false,
+        done: overrides[i] === true,
       });
     }
+
+    const done = recruits.filter((r) => r.done).length;
 
     return {
       today,

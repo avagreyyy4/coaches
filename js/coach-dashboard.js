@@ -185,7 +185,7 @@
     const list = document.getElementById("recruits-list");
     list.innerHTML = "";
 
-    data.recruits.forEach((recruit) => {
+    data.recruits.forEach((recruit, index) => {
       const row = document.createElement("label");
       row.className = "recruit-row" + (recruit.done ? " done" : "");
 
@@ -197,7 +197,9 @@
         recruit.done = checkbox.checked;
         doneCount += checkbox.checked ? 1 : -1;
         updateCounts();
-        // Not wired to Supabase yet — mock data resets on reload.
+        // Persisted in localStorage (not Supabase yet) so this is reflected
+        // consistently on the home-page card too, not just here.
+        window.setRecruitDone(coach.id, index, checkbox.checked);
       });
 
       const info = document.createElement("div");
