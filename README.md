@@ -108,13 +108,14 @@ step once there's real data to look at.
 
 ### Calendar sync (`scripts/fetch_calendar.py`)
 
-Pulls events from Google Calendar(s) — the "staff" calendar, plus a second
-one to be added later — into a Supabase `calendar_events` table
-(`sql/calendar_events.sql`), so the site can show real events instead of
-relying on Google's own embed widget. Recurring events come back
-pre-expanded into individual instances over a rolling window (60 days
-back, 180 days forward from "today") each time it runs. Each row is
-tagged with which calendar it came from (`calendar_id`/`calendar_name`).
+Pulls events from two named Google Calendars — **Staff** and **WBB** — into
+a Supabase `calendar_events` table (`sql/calendar_events.sql`), so the site
+can show real events instead of relying on Google's own embed widget.
+Recurring events come back pre-expanded into individual instances over a
+rolling window (60 days back, 180 days forward from "today") each time it
+runs. Each row is tagged with `calendar_name` — always exactly `"Staff"` or
+`"WBB"` (set by the script, not whatever Google's own calendar title is) —
+so the site can filter/display them separately.
 
 Uses the Calendar API with a service account rather than a calendar's iCal
 link, since that link isn't available here (organization Workspace
@@ -124,19 +125,17 @@ and by the sharing permission each calendar's owner grants it ("See all
 event details," not an edit permission) — it cannot create, modify, or
 delete anything on any calendar.
 
-Which calendars it reads is controlled explicitly by `CALENDAR_IDS` (a
-comma-separated list) rather than "whatever's shared" — safer and more
-predictable, since it'll never start pulling from some other calendar
-that happens to get shared with the service account later without you
-choosing to add it here.
+Adding a third calendar later: give it a name, add a `FOO_CALENDAR_ID`
+secret for it, and add `"Foo": os.getenv("FOO_CALENDAR_ID")` to
+`CALENDAR_SOURCES` at the top of `fetch_calendar.py`.
 
 **Setup:**
 1. In [Google Cloud Console](https://console.cloud.google.com): create/pick
    a project → enable the **Google Calendar API** → **IAM & Admin → Service
    Accounts** → create one (no project role needed) → its **Keys** tab →
    **Add Key → Create new key → JSON**. That downloads the credential file.
-2. For each calendar (staff + the other one, once you know it): ask its
-   owner to share it with the service account's email (looks like
+2. For each calendar (Staff, WBB): ask its owner to share it with the
+   service account's email (looks like
    `xxx@your-project.iam.gserviceaccount.com`), permission **"See all event
    details"** (view-only). Then copy its **Calendar ID** (that calendar's
    settings → Integrate calendar → Calendar ID — not the iCal address).
@@ -145,10 +144,8 @@ choosing to add it here.
    - `GOOGLE_CALENDAR_SA_JSON` — paste the **entire contents** of the
      downloaded JSON key file. Never commit that JSON file anywhere in
      this repo.
-   - `CALENDAR_IDS` — both calendar IDs from step 2, comma-separated
-     (e.g. `abc@group.calendar.google.com,def@group.calendar.google.com`).
-     If you already added a `STAFF_CALENDAR_ID` secret from an earlier
-     setup, it's no longer read — replace it with `CALENDAR_IDS`.
+   - `STAFF_CALENDAR_ID` and `WBB_CALENDAR_ID` — each calendar's own ID
+     from step 2.
 5. `.github/workflows/calendar-sync.yml` runs every 6 hours, or trigger it
    manually from the Actions tab.
 

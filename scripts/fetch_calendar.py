@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # Run: python fetch_calendar.py
 #
-# Pulls events from every Google Calendar shared with a service account
-# (the "staff" calendar, plus whatever else gets shared with it later —
-# sharing is the whole configuration, nothing to list by hand here) and
-# upserts them into Supabase's `calendar_events` table. Uses the read-only
-# Calendar scope — this can only ever list/read events, never create, edit,
-# or delete anything on any calendar.
+# Pulls events from two named Google Calendars (Staff, WBB) via a service
+# account each has been shared with (view-only), and upserts them into
+# Supabase's `calendar_events` table, tagged with calendar_name so the site
+# can tell them apart. Uses the read-only Calendar scope — this can only
+# ever list/read events, never create, edit, or delete anything on any
+# calendar.
 
 import json
 import os
@@ -23,12 +23,16 @@ load_dotenv()
 # as the GitHub secret value / .env value) — never write this to a file in
 # the repo.
 GOOGLE_CALENDAR_SA_JSON = os.getenv("GOOGLE_CALENDAR_SA_JSON")
-# Comma-separated Calendar IDs to pull from, e.g. "abc@group.calendar.google.com,def@group.calendar.google.com".
-# Recommended: explicit and predictable — only ever reads exactly these
-# calendars, nothing more, regardless of what else might get shared with
-# the service account later. Leave unset to instead auto-pull from every
-# calendar currently shared with it (see _list_shared_calendars).
-CALENDAR_IDS = [c.strip() for c in (os.getenv("CALENDAR_IDS") or "").split(",") if c.strip()]
+
+# Each named calendar this script pulls from. The label (dict key) is what
+# gets stored as calendar_name in Supabase and is what the site should
+# filter/display on — not whatever Google's own calendar title happens to
+# be. Add more named calendars here later the same way.
+CALENDAR_SOURCES = {
+    "Staff": os.getenv("STAFF_CALENDAR_ID"),
+    "WBB": os.getenv("WBB_CALENDAR_ID"),
+}
+CALENDAR_SOURCES = {label: cal_id for label, cal_id in CALENDAR_SOURCES.items() if cal_id}
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -45,6 +49,7 @@ missing = []
 if not GOOGLE_CALENDAR_SA_JSON: missing.append("GOOGLE_CALENDAR_SA_JSON")
 if not SUPABASE_URL: missing.append("SUPABASE_URL")
 if not SUPABASE_SERVICE_ROLE_KEY: missing.append("SUPABASE_SERVICE_ROLE_KEY")
+if not CALENDAR_SOURCES: missing.append("STAFF_CALENDAR_ID and/or WBB_CALENDAR_ID")
 if missing:
     raise SystemExit(f"[fatal] Missing required env: {', '.join(missing)}")
 
@@ -57,61 +62,37 @@ def _calendar_service():
     return build("calendar", "v3", credentials=creds)
 
 
-def _list_shared_calendars(service):
-    """Every calendar this service account currently has read access to."""
-    items = service.calendarList().list().execute().get("items", [])
-    if not items:
+def _check_access(service, label, cal_id):
+    try:
+        service.calendars().get(calendarId=cal_id).execute()
+    except Exception as e:
         raise SystemExit(
-            "[fatal] This service account has no calendars shared with it yet — "
-            "ask each calendar's owner to share it (view-only) with the "
-            "service account's email."
+            f"[fatal] Couldn't access the '{label}' calendar ({cal_id}): {e}. "
+            "Check the id is correct and the calendar has been shared "
+            "with the service account (view-only)."
         )
-    return items
-
-
-def _resolve_calendars(service):
-    """
-    CALENDAR_IDS set -> use exactly those (safest: explicit, predictable,
-    reads only what's listed no matter what else gets shared with the
-    service account). Otherwise -> every calendar currently shared with it.
-    """
-    if not CALENDAR_IDS:
-        return _list_shared_calendars(service)
-
-    calendars = []
-    for cal_id in CALENDAR_IDS:
-        try:
-            meta = service.calendars().get(calendarId=cal_id).execute()
-        except Exception as e:
-            raise SystemExit(
-                f"[fatal] Couldn't access calendar '{cal_id}': {e}. "
-                "Check the id is correct and the calendar has been shared "
-                "with the service account (view-only)."
-            )
-        calendars.append({"id": cal_id, "summary": meta.get("summary", cal_id)})
-    return calendars
 
 
 def fetch_events():
     """
-    For every calendar shared with the service account, lists events in
+    For each named calendar, lists events in
     [today-WINDOW_PAST_DAYS, today+WINDOW_FUTURE_DAYS] with singleEvents=True
     so recurring events come back as individual instances (no manual
-    recurrence expansion needed). Returns [(calendar, event), ...].
+    recurrence expansion needed). Returns [(label, cal_id, event), ...].
     """
     service = _calendar_service()
-    calendars = _resolve_calendars(service)
 
     now = datetime.now(timezone.utc)
     time_min = (now - timedelta(days=WINDOW_PAST_DAYS)).isoformat()
     time_max = (now + timedelta(days=WINDOW_FUTURE_DAYS)).isoformat()
 
     results = []
-    for cal in calendars:
+    for label, cal_id in CALENDAR_SOURCES.items():
+        _check_access(service, label, cal_id)
         page_token = None
         while True:
             resp = service.events().list(
-                calendarId=cal["id"],
+                calendarId=cal_id,
                 timeMin=time_min,
                 timeMax=time_max,
                 singleEvents=True,
@@ -120,7 +101,7 @@ def fetch_events():
                 maxResults=2500,
             ).execute()
             for ev in resp.get("items", []):
-                results.append((cal, ev))
+                results.append((label, cal_id, ev))
             page_token = resp.get("nextPageToken")
             if not page_token:
                 break
@@ -145,9 +126,9 @@ def _start_end(event):
     return start_iso, end_iso, True
 
 
-def upsert_events(calendar_and_events):
+def upsert_events(events):
     records = []
-    for cal, ev in calendar_and_events:
+    for label, cal_id, ev in events:
         uid = ev.get("id")
         if not uid:
             continue
@@ -156,8 +137,8 @@ def upsert_events(calendar_and_events):
             continue
 
         records.append({
-            "calendar_id": cal["id"],
-            "calendar_name": cal.get("summary") or cal["id"],
+            "calendar_id": cal_id,
+            "calendar_name": label,
             "uid": uid,
             "title": ev.get("summary") or None,
             "description": ev.get("description") or None,
@@ -180,10 +161,9 @@ def upsert_events(calendar_and_events):
 
 
 def main():
-    calendar_and_events = fetch_events()
-    calendars_seen = sorted({cal.get("summary", cal["id"]) for cal, _ in calendar_and_events})
-    n = upsert_events(calendar_and_events)
-    print(f"[info] upserted {n:,} calendar_events rows from: {', '.join(calendars_seen) or '(none)'}")
+    events = fetch_events()
+    n = upsert_events(events)
+    print(f"[info] upserted {n:,} calendar_events rows from: {', '.join(CALENDAR_SOURCES.keys())}")
 
 
 if __name__ == "__main__":
