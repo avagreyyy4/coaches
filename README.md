@@ -111,17 +111,33 @@ step once there's real data to look at.
 Pulls events from your Google "staff" calendar into a Supabase
 `calendar_events` table (`sql/calendar_events.sql`), so the site can show
 real events instead of relying on Google's own embed widget. Recurring
-events get expanded into individual instances over a rolling window
-(60 days back, 180 days forward from "today") each time it runs.
+events come back pre-expanded into individual instances over a rolling
+window (60 days back, 180 days forward from "today") each time it runs.
+
+Uses the Calendar API with a service account rather than the calendar's
+iCal link, since that link isn't available here (organization Workspace
+calendar + not the owner). The service account only ever gets **read-only**
+access — both by the Calendar API scope requested
+(`calendar.readonly`) and by the sharing permission the calendar owner
+grants it ("See all event details," not an edit permission) — it cannot
+create, modify, or delete anything on the calendar.
 
 **Setup:**
-1. In Google Calendar, open the "staff" calendar's settings → **Integrate
-   calendar** → copy **Secret address in iCal format**. Treat this URL like
-   a password — anyone who has it can read the whole calendar.
-2. Run `sql/calendar_events.sql` in the Supabase SQL editor.
-3. Add `STAFF_CALENDAR_ICAL_URL` to this repo's GitHub Actions secrets
-   (alongside the Supabase ones already there).
-4. `.github/workflows/calendar-sync.yml` runs every 6 hours, or trigger it
+1. In [Google Cloud Console](https://console.cloud.google.com): create/pick
+   a project → enable the **Google Calendar API** → **IAM & Admin → Service
+   Accounts** → create one (no project role needed) → its **Keys** tab →
+   **Add Key → Create new key → JSON**. That downloads the credential file.
+2. Ask whoever owns the "staff" calendar to share it with the service
+   account's email (looks like `xxx@your-project.iam.gserviceaccount.com`),
+   permission **"See all event details"** (view-only).
+3. Get the calendar's **Calendar ID** (Google Calendar → that calendar's
+   settings → Integrate calendar → Calendar ID — not the iCal address).
+4. Run `sql/calendar_events.sql` in the Supabase SQL editor.
+5. Add two secrets to this repo's GitHub Actions secrets: `STAFF_CALENDAR_ID`
+   (from step 3), and `GOOGLE_CALENDAR_SA_JSON` — paste the **entire
+   contents** of the downloaded JSON key file as the value. Never commit
+   that JSON file anywhere in this repo.
+6. `.github/workflows/calendar-sync.yml` runs every 6 hours, or trigger it
    manually from the Actions tab.
 
 Not wired into any page yet — once real rows land in `calendar_events`,

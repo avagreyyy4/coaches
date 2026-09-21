@@ -4,6 +4,5 @@ supabase
 python-dotenv
 playwright
 pyarrow
-requests
-icalendar
-recurring-ical-events
+google-api-python-client
+google-auth
