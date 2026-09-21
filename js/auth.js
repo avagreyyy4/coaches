@@ -85,6 +85,17 @@
     window.dispatchEvent(new CustomEvent("coach-auth-changed", { detail: { session: null } }));
   }
 
+  // When a page is restored from the browser's back/forward cache (bfcache),
+  // none of the script above re-runs — the DOM is just repainted exactly as
+  // it was frozen, which can leave it stuck on whatever it was mid-render
+  // (e.g. still showing neither panel). Forcing a reload on a bfcache
+  // restore guarantees the auth check and render always run fresh.
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted) {
+      window.location.reload();
+    }
+  });
+
   window.coachAuthReady = (async function init() {
     if (!window.supabaseClient) {
       showLoggedOut();

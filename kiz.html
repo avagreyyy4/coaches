@@ -15,16 +15,24 @@
     Supabase is not configured yet. Edit <code>js/config.js</code> with your project URL and anon key.
   </div>
 
-  <header class="topbar">
-    <a href="index.html" class="back-link">&larr; All coaches</a>
-    <div id="session-info" class="session-info" hidden>
-      <span id="user-email"></span>
-      <button id="logout-btn" class="btn btn-ghost">Log out</button>
-    </div>
-  </header>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">Coach Checklist</div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="nav-link"><span class="nav-icon">H</span>Home</a>
+        <a href="ty.html" class="nav-link"><span class="nav-icon">T</span>Ty</a>
+        <a href="allie.html" class="nav-link"><span class="nav-icon">A</span>Allie</a>
+        <a href="kiz.html" class="nav-link active"><span class="nav-icon">K</span>Kiz</a>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div id="session-info" class="session-info" hidden>
+        <span id="user-email"></span>
+        <button id="logout-btn" class="btn btn-ghost">Log out</button>
+      </div>
+    </aside>
 
-  <main>
-    <section id="auth-panel" class="panel">
+    <main class="content">
+      <section id="auth-panel" class="panel">
       <h2>Coach Login</h2>
 
       <form id="password-form">
@@ -86,6 +94,7 @@
       </div>
     </section>
   </main>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
