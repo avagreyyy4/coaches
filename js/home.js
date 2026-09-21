@@ -12,12 +12,9 @@
       card.className = "coach-card";
       card.href = `${coach.id}.html`;
 
-      const head = document.createElement("div");
-      head.className = "coach-card-head";
-      head.innerHTML = `
-        <span class="badge">${coach.name.charAt(0)}</span>
-        <span class="coach-card-name">${coach.name}</span>
-      `;
+      const name = document.createElement("p");
+      name.className = "coach-card-name";
+      name.textContent = coach.name;
 
       const ratio = document.createElement("div");
       ratio.className = "coach-card-ratio";
@@ -31,7 +28,7 @@
       label.className = "coach-card-label";
       label.textContent = "daily recruits reached out to";
 
-      card.appendChild(head);
+      card.appendChild(name);
       card.appendChild(ratio);
       card.appendChild(label);
 

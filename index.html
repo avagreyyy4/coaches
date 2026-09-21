@@ -19,10 +19,16 @@
     <aside class="sidebar">
       <div class="sidebar-brand">Coach Checklist</div>
       <nav class="sidebar-nav">
-        <a href="index.html" class="nav-link active"><span class="nav-icon">H</span>Home</a>
-        <a href="ty.html" class="nav-link"><span class="nav-icon">T</span>Ty</a>
-        <a href="allie.html" class="nav-link"><span class="nav-icon">A</span>Allie</a>
-        <a href="kiz.html" class="nav-link"><span class="nav-icon">K</span>Kiz</a>
+        <a href="index.html" class="nav-link active">Home</a>
+        <button type="button" id="coaches-toggle" class="nav-group-toggle" aria-expanded="true" aria-controls="coaches-subnav">
+          Coaches
+          <svg class="nav-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="nav-subnav" id="coaches-subnav">
+        <a href="ty.html" class="nav-link">Ty</a>
+        <a href="allie.html" class="nav-link">Allie</a>
+        <a href="kiz.html" class="nav-link">Kiz</a>
+        </div>
       </nav>
       <div class="sidebar-spacer"></div>
       <div id="session-info" class="session-info" hidden>
@@ -69,6 +75,7 @@
   <script src="js/supabase-client.js"></script>
   <script src="js/mock-data.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/sidebar.js"></script>
   <script src="js/home.js"></script>
 </body>
 </html>

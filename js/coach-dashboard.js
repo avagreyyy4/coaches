@@ -14,7 +14,6 @@
   };
 
   function render() {
-    document.getElementById("coach-badge").textContent = coach.name.charAt(0);
     document.getElementById("coach-name").textContent = coach.name;
 
     state.anchor = window.getEasternToday();
