@@ -70,19 +70,42 @@
     await window.supabaseClient.auth.signOut();
   });
 
+  // Other scripts (home.js, coach-dashboard.js) need to know the current
+  // auth state, but they may finish loading either before or after auth
+  // actually resolves — a plain "dispatch an event and hope something's
+  // listening" missed the event whenever auth resolved first (this is what
+  // was silently breaking the home page: auth worked, but nothing was
+  // listening yet when it fired). window.onCoachAuthChange fixes that by
+  // replaying the current state immediately to anyone who subscribes late,
+  // in addition to notifying on every future change.
+  let authResolved = false;
+  let currentSession = null;
+  const subscribers = [];
+
+  window.onCoachAuthChange = function (callback) {
+    subscribers.push(callback);
+    if (authResolved) callback(currentSession);
+  };
+
+  function setAuthState(session) {
+    authResolved = true;
+    currentSession = session;
+    subscribers.forEach((cb) => cb(session));
+  }
+
   function showLoggedIn(session) {
     authPanel.hidden = true;
     appPanel.hidden = false;
     sessionInfo.hidden = false;
     userEmailEl.textContent = session.user.email;
-    window.dispatchEvent(new CustomEvent("coach-auth-changed", { detail: { session } }));
+    setAuthState(session);
   }
 
   function showLoggedOut() {
     authPanel.hidden = false;
     appPanel.hidden = true;
     sessionInfo.hidden = true;
-    window.dispatchEvent(new CustomEvent("coach-auth-changed", { detail: { session: null } }));
+    setAuthState(null);
   }
 
   // When a page is restored from the browser's back/forward cache (bfcache),

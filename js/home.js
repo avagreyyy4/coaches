@@ -46,7 +46,7 @@
     });
   }
 
-  window.addEventListener("coach-auth-changed", (e) => {
-    if (e.detail.session) render();
+  window.onCoachAuthChange((session) => {
+    if (session) render();
   });
 })();
