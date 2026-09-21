@@ -5,3 +5,7 @@ scripts/.env
 scripts/.exports_cache.json
 scripts/__pycache__/
 scripts/.venv/
+
+# Real recruit data (names, coach assignments) — local only, never committed.
+# Matches jan_players.csv, feb_players.csv, sep_players.csv, etc.
+scripts/*_players.csv
