@@ -96,20 +96,32 @@
     }
   });
 
-  window.coachAuthReady = (async function init() {
+  // NOTE: deliberately not `await supabaseClient.auth.getSession()` here.
+  // That call can hang indefinitely in a background/inactive tab — it
+  // acquires a browser lock internally that some tabs don't get until they
+  // regain focus, which is exactly why the whole page used to sit stuck
+  // until you switched away and back. Instead: render from
+  // onAuthStateChange's initial event, with a short timeout fallback so the
+  // page never waits forever on it either.
+  window.coachAuthReady = (function init() {
     if (!window.supabaseClient) {
       showLoggedOut();
       return;
     }
-    const {
-      data: { session },
-    } = await window.supabaseClient.auth.getSession();
-    if (session) showLoggedIn(session);
-    else showLoggedOut();
 
-    window.supabaseClient.auth.onAuthStateChange((_event, session) => {
+    let rendered = false;
+    const renderOnce = (session) => {
+      if (rendered) return;
+      rendered = true;
       if (session) showLoggedIn(session);
       else showLoggedOut();
+    };
+
+    window.supabaseClient.auth.onAuthStateChange((_event, session) => {
+      rendered = false; // allow later real changes (login/logout) to re-render
+      renderOnce(session);
     });
+
+    setTimeout(() => renderOnce(null), 2500);
   })();
 })();
