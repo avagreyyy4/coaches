@@ -9,7 +9,7 @@
   --white: #ffffff;
   --gray-50: #f5f6f7;
   --gray-100: #e1e4e8;
-  --gray-500: #6b7280;
+  --gray-500: #5c6675;
   --gray-900: #2a2e33;
 
   --font: "Libre Franklin", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -20,6 +20,21 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+
+html {
+  scrollbar-color: var(--navy) var(--blue-tint-2);
+  scrollbar-width: thin;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--blue-tint-2); }
+::-webkit-scrollbar-thumb {
+  background: var(--navy);
+  border-radius: 8px;
+  border: 2px solid var(--blue-tint-2);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--navy-hover); }
+
+::selection { background: var(--columbia-blue); color: var(--navy); }
 
 html, body {
   margin: 0;
@@ -36,6 +51,15 @@ body {
 
 h1, h2, h3, p { margin: 0; }
 a { color: inherit; }
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--columbia-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 
 /* ---- Shell ---- */
 .banner {
@@ -85,20 +109,19 @@ a { color: inherit; }
   gap: 0.6rem;
   padding: 0.65rem 0.6rem;
   border-radius: var(--radius-sm);
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
   font-size: 0.92rem;
   font-weight: 500;
-  border-left: 3px solid transparent;
+  transition: color 140ms ease, background-color 140ms ease;
 }
 .nav-link:hover {
   color: var(--white);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.07);
 }
 .nav-link.active {
   color: var(--white);
-  background: rgba(185, 217, 235, 0.14);
-  border-left-color: var(--columbia-blue);
+  background: rgba(185, 217, 235, 0.16);
   font-weight: 600;
 }
 .nav-icon {
@@ -112,6 +135,7 @@ a { color: inherit; }
   font-size: 0.72rem;
   font-weight: 700;
   flex-shrink: 0;
+  transition: background-color 140ms ease, color 140ms ease;
 }
 .nav-link.active .nav-icon {
   background: var(--columbia-blue);
@@ -209,10 +233,12 @@ input[type="email"], input[type="password"] {
   background: var(--white);
   border: 1px solid var(--gray-100);
   color: var(--gray-900);
+  caret-color: var(--navy);
   padding: 0.6rem 0.7rem;
   border-radius: var(--radius-sm);
   font-size: 0.95rem;
   font-family: var(--font);
+  transition: border-color 140ms ease;
 }
 input:focus { outline: 2px solid var(--columbia-blue); outline-offset: 1px; border-color: var(--navy); }
 
@@ -226,6 +252,7 @@ input:focus { outline: 2px solid var(--columbia-blue); outline-offset: 1px; bord
   cursor: pointer;
   font-family: var(--font);
   font-weight: 600;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 .btn-primary { background: var(--navy); color: var(--white); }
 .btn-primary:hover { background: var(--navy-hover); }
