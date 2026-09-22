@@ -332,24 +332,20 @@
   font-family: var(--font-display);
   font-size: 0.95rem;
   font-weight: 500;
-  color: var(--gray-500);
+  color: var(--gray-900);
   background: var(--white);
   font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
 }
-.calendar-day.empty { border: none; background: transparent; }
+.calendar-day.empty { border: none; background: transparent; cursor: default; }
 
-.calendar-day.hit {
-  background: var(--navy);
+.calendar-day:not(.empty):not(.today):hover,
+.calendar-day:not(.empty):not(.today):focus-visible {
   border-color: var(--navy);
-  color: var(--white);
-  font-weight: 700;
+  background: var(--blue-tint-2);
 }
-.calendar-day.missed {
-  background: var(--white);
-  border: 1.5px solid var(--navy);
-  color: var(--gray-900);
-  font-weight: 600;
-}
+
 .calendar-day.today {
   background: var(--columbia-blue);
   border-color: var(--columbia-blue);
@@ -411,8 +407,9 @@
 
 .recruit-info { flex: 1; }
 .recruit-name { font-size: 0.95rem; font-weight: 500; color: var(--gray-900); }
-.recruit-missing { font-size: 0.78rem; color: var(--gray-500); margin-top: 0.2rem; }
-.recruit-missing-label { color: var(--navy); font-weight: 700; }
+.recruit-phone { font-size: 0.8rem; color: var(--gray-500); margin-top: 0.15rem; }
+.recruit-missing { font-size: 0.78rem; color: var(--flag); margin-top: 0.2rem; }
+.recruit-missing-label { color: var(--flag); font-weight: 700; }
 
 .recruit-row.done .recruit-name {
   color: var(--gray-500);

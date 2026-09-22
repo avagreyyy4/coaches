@@ -15,11 +15,16 @@
     { id: "kiz", name: "Kiz" },
   ];
 
-  const MISSING_FIELD_POOL = [
-    "transcript", "address", "phone number", "email", "GPA", "highlight tape",
-  ];
+  const FIRST_NAMES = ["Jordan", "Maya", "Skylar", "Reese", "Peyton", "Harper", "Avery", "Riley", "Sydney", "Kennedy"];
+  const LAST_NAMES = ["Bennett", "Carver", "Doyle", "Ellison", "Foster", "Grady", "Holt", "Ibarra", "Jansen", "Kessler"];
 
   const HISTORY_DAYS = 45; // how far back the mock log/chain extends
+
+  // Real ARMS field is "Has Transcript" (MM/DD/YYYY, or blank). A transcript
+  // on file from before this date is a stale pre-junior-year transcript and
+  // still counts as missing — mirrors the rule used once this is wired to
+  // real data.
+  const TRANSCRIPT_STALE_CUTOFF = new Date(2026, 5, 15); // June 15, 2026
 
   // Deterministic little PRNG so mock output is stable across reloads.
   function seededRandom(seed) {
@@ -38,16 +43,24 @@
     return h;
   }
 
-  // Picks 1–3 fields (out of the pool) that this placeholder player is
-  // missing, deterministically per player.
-  function missingFieldsFor(rand) {
-    const shuffled = MISSING_FIELD_POOL.slice();
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(rand() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  function parseTranscriptDate(mmddyyyy) {
+    const [m, d, y] = mmddyyyy.split("/").map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  // Missing-info flagging only applies to the active (2028) class — 2027 is
+  // not flagged at all. Transcript counts as missing if there's none on
+  // file, or the one on file predates the stale cutoff above.
+  function missingFieldsFor(recruit) {
+    if (recruit.gradYear !== "2028") return [];
+    const missing = [];
+    if (!recruit.email) missing.push("email");
+    if (!recruit.phone) missing.push("phone number");
+    if (!recruit.homeAddress) missing.push("home address");
+    if (!recruit.hasTranscriptDate || parseTranscriptDate(recruit.hasTranscriptDate) <= TRANSCRIPT_STALE_CUTOFF) {
+      missing.push("transcript");
     }
-    const count = 1 + Math.floor(rand() * 3);
-    return shuffled.slice(0, count);
+    return missing;
   }
 
   // ---- Eastern-time "today", independent of the viewer's own timezone ----
@@ -172,12 +185,28 @@
     const rand = seededRandom(hashSeed(coachId + "-recruits-" + todayISO));
     const recruits = [];
     for (let i = 0; i < target; i++) {
-      recruits.push({
+      const gradYear = rand() < 0.55 ? "2028" : "2027";
+      const hasPhone = rand() < 0.85;
+      const hasEmail = rand() < 0.8;
+      const hasAddress = rand() < 0.75;
+      let hasTranscriptDate = null;
+      if (rand() < 0.5) {
+        hasTranscriptDate = rand() < 0.5 ? "03/12/2026" : "08/20/2026"; // before / after the stale cutoff
+      }
+
+      const recruit = {
         id: `${coachId}-${todayISO}-${i}`,
-        name: `Player ${i + 1}`,
-        missing: missingFieldsFor(rand),
+        firstName: FIRST_NAMES[Math.floor(rand() * FIRST_NAMES.length)],
+        lastName: LAST_NAMES[Math.floor(rand() * LAST_NAMES.length)],
+        phone: hasPhone ? `704-555-${String(1000 + i).slice(1)}` : null,
+        gradYear,
+        hasTranscriptDate,
+        email: hasEmail,
+        homeAddress: hasAddress,
         done: overrides[i] === true,
-      });
+      };
+      recruit.missing = missingFieldsFor(recruit);
+      recruits.push(recruit);
     }
 
     const done = recruits.filter((r) => r.done).length;

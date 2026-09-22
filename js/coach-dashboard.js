@@ -151,7 +151,6 @@
     for (let day = 1; day <= daysInMonth; day++) {
       const d = new Date(year, month, day);
       const iso = window.isoDate(d);
-      const entry = window.getCoachDayEntry(coach.id, d);
 
       const cell = document.createElement("div");
       cell.className = "calendar-day";
@@ -159,9 +158,24 @@
 
       if (iso === todayISO) {
         cell.classList.add("today");
-      } else if (entry) {
-        cell.classList.add(entry.done >= entry.target ? "hit" : "missed");
       }
+
+      // Clicking a day jumps into a focused view anchored on that day,
+      // rather than color-coding whether quota was hit that day.
+      cell.setAttribute("role", "button");
+      cell.tabIndex = 0;
+      const goToDay = () => {
+        state.anchor = d;
+        state.view = "3day";
+        renderCalendar();
+      };
+      cell.addEventListener("click", goToDay);
+      cell.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          goToDay();
+        }
+      });
       grid.appendChild(cell);
     }
 
@@ -205,8 +219,15 @@
       info.className = "recruit-info";
       const name = document.createElement("div");
       name.className = "recruit-name";
-      name.textContent = recruit.name;
+      name.textContent = `${recruit.firstName} ${recruit.lastName}`;
       info.appendChild(name);
+
+      if (recruit.phone) {
+        const phone = document.createElement("div");
+        phone.className = "recruit-phone";
+        phone.textContent = recruit.phone;
+        info.appendChild(phone);
+      }
 
       if (recruit.missing && recruit.missing.length) {
         const missing = document.createElement("div");

@@ -17,6 +17,13 @@ reviewed before real data was ready. **Nothing on these pages reads from or
 writes to Supabase yet** — checking a box in the recruit list only updates
 the page in memory and resets on reload.
 
+Recruit rows now carry the real field shape (name, phone, grad year,
+transcript-on-file date, email/address presence) even though the values are
+still mocked — missing-info flags (pink) use the actual rule: only shown for
+the 2028 class (2027 is never flagged), and a transcript counts as missing if
+there's none on file or the one on file predates 6/15/2026. Swapping in real
+data just means populating those same fields from `player_arms_match`.
+
 The `progress` table + RLS policies in `sql/schema.sql` were built for an
 earlier, simpler "shared checklist" version of this app and no longer match
 what the UI needs (per-coach daily quotas with rollover, a recruit list per
