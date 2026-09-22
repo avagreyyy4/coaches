@@ -5,10 +5,14 @@
 
   const trackerEl = document.getElementById("season-tracker");
 
-  function render() {
+  async function render() {
     grid.innerHTML = "";
-    window.COACHES.forEach((coach) => {
-      const data = window.getCoachDashboardData(coach.id);
+    const results = await Promise.all(
+      window.COACHES.map((coach) => window.getCoachDashboardData(coach.id))
+    );
+
+    window.COACHES.forEach((coach, i) => {
+      const data = results[i];
 
       const card = document.createElement("a");
       card.className = "coach-card";
@@ -29,10 +33,10 @@
       card.appendChild(name);
       card.appendChild(ratio);
 
-      if (data.todayTarget > 5) {
+      if (data.todayTarget > window.DAILY_QUOTA) {
         const note = document.createElement("p");
         note.className = "coach-card-note";
-        note.textContent = `Includes ${data.todayTarget - 5} carried over from yesterday`;
+        note.textContent = `Includes ${data.todayTarget - window.DAILY_QUOTA} carried over from yesterday`;
         card.appendChild(note);
       }
 
@@ -42,10 +46,10 @@
     renderTracker();
   }
 
-  function renderTracker() {
+  async function renderTracker() {
     if (!trackerEl) return;
-    const { contacted, total } = window.getSeasonProgress();
-    const pct = Math.round((contacted / total) * 100);
+    const { contacted, total } = await window.getSeasonProgress();
+    const pct = total > 0 ? Math.round((contacted / total) * 100) : 0;
 
     trackerEl.innerHTML = `
       <div class="season-tracker-head">

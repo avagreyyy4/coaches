@@ -6,11 +6,12 @@
 #      and drops out of the active list for good.
 #   2. Anyone active but still unchecked stays active untouched — they
 #      carry over onto today's list rather than getting reassigned.
-#   3. Each coach gets topped back up to carryover + 5 by activating their
-#      next 5 pending players (in sort_order). If a coach hit quota every
-#      day, that's just 5; if they left some unchecked, today's list is
-#      bigger by exactly that leftover — same rollover rule js/mock-data.js
-#      describes, just backed by real state instead of a mock chain.
+#   3. Each coach gets topped back up to carryover + DAILY_QUOTA by
+#      activating their next DAILY_QUOTA pending players (in sort_order).
+#      If a coach hit quota every day, that's just DAILY_QUOTA; if they
+#      left some unchecked, today's list is bigger by exactly that
+#      leftover. Keep DAILY_QUOTA here in sync with js/data.js's copy —
+#      they're separate runtimes with no shared source of truth.
 #
 # Reads/writes through the `current_players` view, so it always lands on
 # whichever month's table scripts/import_players.py last pointed it at.
@@ -25,7 +26,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from db import get_connection
 
-DAILY_QUOTA = 5
+DAILY_QUOTA = 7
 COACHES = ["ty", "allie", "kiz"]
 
 

@@ -295,13 +295,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.day-card.hit { background: var(--navy); border-color: var(--navy); }
-.day-card.hit .day-card-weekday,
-.day-card.hit .day-card-date,
-.day-card.hit .day-card-stat { color: var(--white); }
-
-.day-card.missed { border: 1.5px solid var(--navy); }
-
 .day-card.today { background: var(--columbia-blue); border-color: var(--columbia-blue); }
 .day-card.today .day-card-weekday { color: var(--navy); }
 .day-card.today .day-card-date { color: var(--navy); }
@@ -353,26 +346,6 @@
   font-weight: 700;
 }
 
-.calendar-legend {
-  display: flex;
-  gap: 1.4rem;
-  margin-top: 1.25rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--gray-100);
-  font-size: 0.78rem;
-  color: var(--gray-500);
-}
-.calendar-legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
-.legend-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  display: inline-block;
-  border: 1px solid var(--gray-100);
-}
-.legend-swatch.hit { background: var(--navy); border-color: var(--navy); }
-.legend-swatch.missed { background: var(--white); border: 1.5px solid var(--navy); }
-.legend-swatch.today { background: var(--columbia-blue); border-color: var(--columbia-blue); }
 
 /* Recruit list */
 .recruits-summary {
@@ -407,6 +380,7 @@
 
 .recruit-info { flex: 1; }
 .recruit-name { font-size: 0.95rem; font-weight: 500; color: var(--gray-900); }
+.recruit-rank { font-size: 0.8rem; color: var(--gray-500); margin-top: 0.15rem; }
 .recruit-phone { font-size: 0.8rem; color: var(--gray-500); margin-top: 0.15rem; }
 .recruit-missing { font-size: 0.78rem; color: var(--flag); margin-top: 0.2rem; }
 .recruit-missing-label { color: var(--flag); font-weight: 700; }

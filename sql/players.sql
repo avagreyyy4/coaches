@@ -92,7 +92,8 @@ select
   a.grad_year as arms_grad_year,
   a.data as arms_data,
   a.synced_at as arms_synced_at,
-  (a.id is not null) as matched_in_arms
+  (a.id is not null) as matched_in_arms,
+  p.sort_order
 from public.current_players p
 left join matches m on m.player_id = p.id
 left join public.arms a on a.id = m.arms_id;

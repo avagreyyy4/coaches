@@ -11,14 +11,17 @@
   const state = {
     view: "5day", // "3day" | "5day" | "month" — defaults to a 5-day outlook
     anchor: null, // Date; for day views the leftmost visible day, for month view any day in the visible month
+    todayStats: null, // { done, target } for today's real queue, set once render() loads it
   };
 
-  function render() {
+  async function render() {
     document.getElementById("coach-name").textContent = coach.name;
 
     state.anchor = window.getEasternToday();
+    const data = await window.getCoachDashboardData(coach.id);
+    state.todayStats = { done: data.todayDone, target: data.todayTarget };
     renderCalendar();
-    renderRecruits(window.getCoachDashboardData(coach.id));
+    renderRecruits(data);
   }
 
   // ---- Calendar: toolbar wiring ----
@@ -86,7 +89,6 @@
     for (let i = 0; i < count; i++) {
       const d = window.addDays(state.anchor, i);
       const iso = window.isoDate(d);
-      const entry = window.getCoachDayEntry(coach.id, d);
 
       const card = document.createElement("div");
       card.className = "day-card";
@@ -94,10 +96,7 @@
       let statText;
       if (iso === todayISO) {
         card.classList.add("today");
-        statText = entry ? `${entry.done} of ${entry.target}` : "—";
-      } else if (entry) {
-        card.classList.add(entry.done >= entry.target ? "hit" : "missed");
-        statText = `${entry.done} of ${entry.target}`;
+        statText = state.todayStats ? `${state.todayStats.done} of ${state.todayStats.target}` : "—";
       } else {
         card.classList.add("future");
         statText = "No data yet";
@@ -187,9 +186,6 @@
     const summaryEl = document.getElementById("recruits-summary");
     let doneCount = data.todayDone;
 
-    // NOTE: intentionally not touching the calendar's "today" cell here —
-    // that comes from the separate historical mock chain (getCoachDayEntry),
-    // a different number by design from this placeholder 5-player list.
     function updateCounts() {
       summaryEl.innerHTML = `<strong>${doneCount} of ${data.todayTarget}</strong> reached out to today`;
     }
@@ -198,7 +194,7 @@
     const list = document.getElementById("recruits-list");
     list.innerHTML = "";
 
-    data.recruits.forEach((recruit, index) => {
+    data.recruits.forEach((recruit) => {
       const row = document.createElement("label");
       row.className = "recruit-row" + (recruit.done ? " done" : "");
 
@@ -210,17 +206,25 @@
         recruit.done = checkbox.checked;
         doneCount += checkbox.checked ? 1 : -1;
         updateCounts();
-        // Persisted in localStorage (not Supabase yet) so this is reflected
-        // consistently on the home-page card too, not just here.
-        window.setRecruitDone(coach.id, index, checkbox.checked);
+        window.setRecruitDone(coach.id, recruit.id, checkbox.checked);
       });
 
       const info = document.createElement("div");
       info.className = "recruit-info";
+
       const name = document.createElement("div");
       name.className = "recruit-name";
-      name.textContent = `${recruit.firstName} ${recruit.lastName}`;
+      name.textContent = recruit.gradYear
+        ? `${recruit.firstName} ${recruit.lastName} (${recruit.gradYear})`
+        : `${recruit.firstName} ${recruit.lastName}`;
       info.appendChild(name);
+
+      if (recruit.acsRank) {
+        const rank = document.createElement("div");
+        rank.className = "recruit-rank";
+        rank.textContent = recruit.acsRank;
+        info.appendChild(rank);
+      }
 
       if (recruit.phone) {
         const phone = document.createElement("div");
