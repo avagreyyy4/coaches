@@ -206,6 +206,10 @@
         recruit.done = checkbox.checked;
         doneCount += checkbox.checked ? 1 : -1;
         updateCounts();
+        if (state.todayStats) {
+          state.todayStats.done = doneCount;
+          renderCalendar();
+        }
         window.setRecruitDone(coach.id, recruit.id, checkbox.checked);
       });
 
