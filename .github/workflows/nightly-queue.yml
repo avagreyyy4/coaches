@@ -1,0 +1,38 @@
+name: Nightly Recruit Queue Rollover
+
+on:
+  schedule:
+    # GitHub Actions cron is UTC-only, and 1am Eastern shifts with DST —
+    # split across two schedules so it lands on 1am ET either way. The
+    # ~1-week window around the actual DST changeover (early Nov / mid Mar)
+    # will be off by an hour; not worth cron-level precision for this.
+    - cron: "0 5 * 3-10 *"      # 1am EDT (UTC-4), Mar–Oct
+    - cron: "0 6 * 11,12,1,2 *" # 1am EST (UTC-5), Nov–Feb
+  workflow_dispatch: # lets you trigger a run manually any time (e.g. to test)
+
+concurrency:
+  group: nightly-recruit-queue
+  cancel-in-progress: false
+
+jobs:
+  rollover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps
+        working-directory: scripts
+        run: pip install psycopg2-binary python-dotenv
+
+      - name: Roll over recruit queues
+        working-directory: scripts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python nightly_queue.py
