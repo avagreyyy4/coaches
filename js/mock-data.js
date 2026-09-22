@@ -189,4 +189,33 @@
       recruits,
     };
   };
+
+  // ---- Season-wide progress across all coaches (home page tracker) ----
+  // Placeholder: TOTAL_ROSTER matches the real September roster (117 + 97 +
+  // 81 = 295 across the 3 coaches). "Contacted" is a mock baseline that
+  // grows day by day (deterministic, stable across reloads) plus whatever's
+  // actually been checked off today (live, from localStorage) — so the
+  // tracker visibly ticks up both as days pass and as players get checked.
+  const TOTAL_ROSTER = 295;
+
+  window.getSeasonProgress = function () {
+    const today = easternToday();
+    const dayOfMonth = today.getDate();
+    const rand = seededRandom(hashSeed(`season-progress-${today.getFullYear()}-${today.getMonth()}`));
+
+    const perDayAvg = TOTAL_ROSTER / 30;
+    let baseline = 0;
+    for (let d = 1; d < dayOfMonth; d++) {
+      baseline += perDayAvg * (0.6 + rand() * 0.8);
+    }
+    baseline = Math.round(baseline);
+
+    let todayChecked = 0;
+    window.COACHES.forEach((coach) => {
+      todayChecked += window.getCoachDashboardData(coach.id).todayDone;
+    });
+
+    const contacted = Math.min(baseline + todayChecked, TOTAL_ROSTER);
+    return { contacted, total: TOTAL_ROSTER };
+  };
 })();

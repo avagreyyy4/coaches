@@ -1,7 +1,9 @@
-// Renders the 3 coach cards on the home page from mock data.
+// Renders the 3 coach cards + season-wide tracker on the home page.
 (function () {
   const grid = document.getElementById("coach-grid");
   if (!grid) return;
+
+  const trackerEl = document.getElementById("season-tracker");
 
   function render() {
     grid.innerHTML = "";
@@ -24,13 +26,8 @@
         <span class="goal">${data.todayTarget}</span>
       `;
 
-      const label = document.createElement("p");
-      label.className = "coach-card-label";
-      label.textContent = "daily recruits reached out to";
-
       card.appendChild(name);
       card.appendChild(ratio);
-      card.appendChild(label);
 
       if (data.todayTarget > 5) {
         const note = document.createElement("p");
@@ -40,6 +37,32 @@
       }
 
       grid.appendChild(card);
+    });
+
+    renderTracker();
+  }
+
+  function renderTracker() {
+    if (!trackerEl) return;
+    const { contacted, total } = window.getSeasonProgress();
+    const pct = Math.round((contacted / total) * 100);
+
+    trackerEl.innerHTML = `
+      <div class="season-tracker-head">
+        <span class="season-tracker-label">Total players reached out to</span>
+        <span class="season-tracker-count"><strong>${contacted}</strong> of ${total}</span>
+      </div>
+      <div class="season-tracker-bar">
+        <div class="season-tracker-fill" id="season-tracker-fill"></div>
+      </div>
+    `;
+
+    // Set the fill on the next frame (not inline above) so it starts from
+    // the CSS default scaleX(0) and actually transitions in, rather than
+    // painting straight at its final value.
+    const fill = document.getElementById("season-tracker-fill");
+    requestAnimationFrame(() => {
+      fill.style.transform = `scaleX(${pct / 100})`;
     });
   }
 
