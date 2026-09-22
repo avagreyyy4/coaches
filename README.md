@@ -106,25 +106,31 @@ Put the CSV anywhere outside git tracking — `data/` and
 
 ### Ingestion script (`scripts/`)
 
-`scripts/fetch_and_push.py` pulls the "Full Info" export from ARMS for
-**both grad year 2028 and 2027** (`scripts/config.json` has one export
-entry per grad year — the roster spans both) and upserts it into `arms`.
-It's adapted from `arms_automation_27/fetch_and_push.py` — same ARMS
-login/navigation/export logic, two differences:
+`scripts/fetch_and_push.py` pulls one combined "Full Info" export from
+ARMS covering **both grad year 2028 and 2027** (`scripts/config.json`'s
+`gradYear.selector` checks both boxes in one pass — the roster spans both
+years) and upserts it into `arms`. It's adapted from
+`arms_automation_27/fetch_and_push.py` — same ARMS login/navigation/export
+logic, differences:
 1. Writes to Supabase instead of Google Sheets.
-2. Pulls 2028 in addition to 2027, not instead of it.
+2. Pulls both grad years in one export, not just 2027.
+3. The ARMS export layout (`"2028 Full Info"`) has a **"Grad. Year"**
+   column added to it, so each row's actual grad year is read from the
+   export data itself rather than assumed from which filter box was
+   checked — necessary once a single export can contain more than one
+   grad year. `upsert_arms_rows` fails loudly if that column is ever
+   missing from the layout.
 
 `arms_automation_27`'s own pipeline (→ Google Sheets, class of 2027) is
 untouched — this is a separate script/workflow living in this repo.
 
-The `"2028 Full Info"` layout is confirmed working (a real run landed
-1,991 rows in `arms`, deduped by `grad_year, full_name` — the real export
-does contain some duplicate rows, handled automatically). `"2027 Full
-Info"` was just added and hasn't had a real run yet, but is the original
-layout `arms_automation_27` already used successfully for years. If ARMS
-ever renames a layout, the script fails with a clear
-`layout '...' not found` error naming which one — update
-`layoutOptionText` for that export in `scripts/config.json` to match.
+Confirmed working end-to-end with real data (1,991 rows landed in `arms`
+from the 2028-only version of this export before the 2027/combined change;
+re-verify row count after the next run picks up both years). Duplicate
+`(grad_year, full_name)` rows in the real export are deduped automatically
+before upserting. If ARMS ever renames the layout, the script fails with a
+clear `layout '...' not found` error — update `layoutOptionText` in
+`scripts/config.json` to match.
 
 **Setup:**
 1. Run `sql/players.sql` in the Supabase SQL editor (defines

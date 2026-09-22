@@ -1,16 +1,10 @@
 {
   "exports": [
     {
-      "name": "Full_Contact_2028",
-      "label": "Raw_Full_Contact_28",
-      "filters": { "gradYear": { "type": "checkbox", "selector": "2028" } },
+      "name": "Full_Contact_2027_2028",
+      "label": "Raw_Full_Contact_27_28",
+      "filters": { "gradYear": { "type": "checkbox", "selector": ["2027", "2028"] } },
       "export": { "layoutOptionText": "2028 Full Info" }
-    },
-    {
-      "name": "Full_Contact_2027",
-      "label": "Raw_Full_Contact_27",
-      "filters": { "gradYear": { "type": "checkbox", "selector": "2027" } },
-      "export": { "layoutOptionText": "2027 Full Info" }
     }
   ]
 }

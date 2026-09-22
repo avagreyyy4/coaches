@@ -86,10 +86,14 @@ def ensure_arms_table():
         conn.close()
 
 
-def upsert_arms_rows(df: pd.DataFrame, grad_year: str, source_export: str):
+def upsert_arms_rows(df: pd.DataFrame, source_export: str):
     """
     Writes each row of the export into the `arms` table as:
       grad_year, full_name, data (the full row as JSON), source_export, synced_at
+    `grad_year` comes from the export's own "Grad. Year" column (added so a
+    single combined export covering multiple grad years can still be tagged
+    correctly per row) — NOT from which filter checkbox was used to pull
+    the export, since a combined export can contain more than one year.
     `data` keeps every column ARMS gave us, since the exact CSV columns
     depend on the export layout ARMS is configured with and aren't hardcoded
     here. Upserts on (grad_year, full_name) — the natural key available from
@@ -98,6 +102,8 @@ def upsert_arms_rows(df: pd.DataFrame, grad_year: str, source_export: str):
     """
     if "Full Name" not in df.columns:
         raise RuntimeError("Export has no 'Full Name' column — can't key rows for Supabase upsert.")
+    if "Grad. Year" not in df.columns:
+        raise RuntimeError("Export has no 'Grad. Year' column — add it to the ARMS export layout.")
 
     # Keyed by (grad_year, full_name) so a duplicate row later in the export
     # overwrites the earlier one instead of both landing in the same
@@ -106,9 +112,14 @@ def upsert_arms_rows(df: pd.DataFrame, grad_year: str, source_export: str):
     # the same conflict key.
     records_by_key = {}
     dupes = 0
+    missing_grad_year = 0
     for _, row in df.iterrows():
         full_name = str(row.get("Full Name", "")).strip()
         if not full_name:
+            continue
+        grad_year = str(row.get("Grad. Year", "")).strip()
+        if not grad_year:
+            missing_grad_year += 1
             continue
         key = (grad_year, full_name)
         if key in records_by_key:
@@ -122,6 +133,8 @@ def upsert_arms_rows(df: pd.DataFrame, grad_year: str, source_export: str):
 
     if dupes:
         print(f"[warn] {dupes} duplicate (grad_year, full_name) rows in export — kept the last one for each.")
+    if missing_grad_year:
+        print(f"[warn] {missing_grad_year} rows had no Grad. Year value — skipped.")
 
     records = list(records_by_key.values())
     if not records:
@@ -276,7 +289,7 @@ def _parse_statuses(exp: Dict) -> List[str]:
         vals = [v.strip() for v in re.split(r"[,\|/]+", vals) if v.strip()]
     return vals
 
-async def apply_filters(scope, grad_year: Optional[str], statuses: Optional[List[str]] = None):
+async def apply_filters(scope, grad_years: Optional[List[str]], statuses: Optional[List[str]] = None):
     await _expand_section(scope, _rx_exact("Status"))
     await _expand_section(scope, _rx_exact("Grad. Year"))
 
@@ -287,11 +300,12 @@ async def apply_filters(scope, grad_year: Optional[str], statuses: Optional[List
     else:
         await _click_link_in_section(scope, _rx_exact("Status"), _rx_exact("all"))
 
-    if grad_year:
+    if grad_years:
         await _click_link_in_section(scope, _rx_exact("Grad. Year"), re.compile(r"^\s*none\s*$", re.I))
-        rx_year = _rx_startswith(grad_year)
-        await _scroll_until_visible(scope, rx_year)
-        await ensure_checkbox_checked(scope, rx_year)
+        for grad_year in grad_years:
+            rx_year = _rx_startswith(grad_year)
+            await _scroll_until_visible(scope, rx_year)
+            await ensure_checkbox_checked(scope, rx_year)
 
 def add_social_urls(df: pd.DataFrame) -> pd.DataFrame:
     if "Twitter" in df.columns:
@@ -705,20 +719,28 @@ async def start_export_from_admin(layout_text: str, page):
     raise RuntimeError("Admin Export: could not click the final Export button.")
 
 # ===================== CORE FLOW =====================
-def _parse_grad_year(exp: Dict):
+def _parse_grad_years(exp: Dict) -> List[str]:
+    """
+    Reads filters.gradYear.selector, which may be a single year string
+    ("2028") or a list of years (["2027", "2028"]) for a combined export.
+    Returns every 4-digit year found, in order, deduped.
+    """
     f = exp.get("filters") or {}
-    if "gradYear" in f:
-        sel = f["gradYear"].get("selector", "")
-        m = re.search(r"\b(20\d{2}|19\d{2})\b", sel) or re.search(r"\b(20\d{2}|19\d{2})\b", exp.get("name",""))
-        return m.group(1) if m else None
-    return None
+    sel = (f.get("gradYear") or {}).get("selector", "")
+    items = sel if isinstance(sel, list) else [sel]
+    years = []
+    for item in items:
+        for m in re.findall(r"\b(20\d{2}|19\d{2})\b", str(item)):
+            if m not in years:
+                years.append(m)
+    return years
 
 async def do_one_export(page, exp: Dict):
     name = exp.get("name", "Unnamed")
     label = exp.get("label", name)
-    grad_year = _parse_grad_year(exp) or "unknown"
+    grad_years = _parse_grad_years(exp)
     layout_text = exp.get("export", {}).get("layoutOptionText") or name.replace("_", " ")
-    print(f"\n=== Export: {name} (grad year {grad_year}) ===", flush=True)
+    print(f"\n=== Export: {name} (grad years {grad_years or 'all'}) ===", flush=True)
 
     try:
         await page.get_by_role("button", name=_rx_exact("Cancel")).first.click(timeout=800)
@@ -730,7 +752,7 @@ async def do_one_export(page, exp: Dict):
 
     scope = await find_filters_scope(page)
     try:
-        await apply_filters(scope, grad_year, _parse_statuses(exp))
+        await apply_filters(scope, grad_years, _parse_statuses(exp))
     except Exception as e:
         print(f"[warn] filter step issue: {e}")
 
@@ -752,7 +774,7 @@ async def do_one_export(page, exp: Dict):
     df = add_social_urls(df)
 
     try:
-        n = upsert_arms_rows(df, grad_year, label)
+        n = upsert_arms_rows(df, label)
         print(f"[info] upserted {n:,} rows into Supabase 'arms' (source_export={label})")
     except Exception as e:
         print(f"[error] failed to write to Supabase for {name}: {e}")
