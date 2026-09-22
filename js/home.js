@@ -54,6 +54,7 @@
     const { contacted, total } = progress;
     const pct = total > 0 ? Math.round((contacted / total) * 100) : 0;
 
+    trackerEl.hidden = false;
     trackerEl.innerHTML = `
       <div class="season-tracker-head">
         <span class="season-tracker-label">Total players reached out to</span>
