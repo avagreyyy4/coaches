@@ -8,7 +8,8 @@
 #      full ARMS export; it's separate from `players`, the roster coaches
 #      actually track, which gets manually entered and joined against
 #      `arms` by full name (see sql/players.sql).
-#   2. config.json targets grad year 2028 instead of 2027.
+#   2. config.json pulls both grad year 2028 and 2027 (the roster spans
+#      both), not just 2027 like the original script.
 # Everything else (ARMS login, navigation, export/download, data cleanup) is
 # unchanged from the original. Runs monthly (see .github/workflows), since
 # ARMS data doesn't need to be pulled daily.

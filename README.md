@@ -49,8 +49,9 @@ dropped once the coach pages are wired to real data.
 ## Data architecture
 
 - **`arms`** (`sql/arms.sql`, auto-created by `scripts/fetch_and_push.py`)
-  — the full ARMS export for grad year 2028, refreshed monthly. This is
-  ARMS's entire recruit pool, not just players being tracked.
+  — the full ARMS export for grad years 2028 and 2027 (the roster spans
+  both), refreshed monthly. This is ARMS's entire recruit pool, not just
+  players being tracked.
 - **A monthly players table** (`sep_players`, `oct_players`, ...) — the
   actual roster, imported from a CSV you hand-manage locally by
   `scripts/import_players.py` (see below). Each month is its own table;
@@ -105,23 +106,25 @@ Put the CSV anywhere outside git tracking — `data/` and
 
 ### Ingestion script (`scripts/`)
 
-`scripts/fetch_and_push.py` pulls the grad-2028 "Full Info" export from ARMS
-and upserts it into `arms`. It's adapted from
-`arms_automation_27/fetch_and_push.py` — same ARMS login/navigation/export
-logic, two differences:
+`scripts/fetch_and_push.py` pulls the "Full Info" export from ARMS for
+**both grad year 2028 and 2027** (`scripts/config.json` has one export
+entry per grad year — the roster spans both) and upserts it into `arms`.
+It's adapted from `arms_automation_27/fetch_and_push.py` — same ARMS
+login/navigation/export logic, two differences:
 1. Writes to Supabase instead of Google Sheets.
-2. Targets grad year **2028** (`scripts/config.json`), not 2027.
+2. Pulls 2028 in addition to 2027, not instead of it.
 
 `arms_automation_27`'s own pipeline (→ Google Sheets, class of 2027) is
 untouched — this is a separate script/workflow living in this repo.
 
-**Before this runs successfully, check in ARMS**: the export layout it asks
-for is `"2028 Full Info"` (following the same naming pattern as the existing
-`"2027 Full Info"` layout). If your ARMS admin hasn't created a 2028 version
-of that export layout yet, the script will fail with a clear
-`layout '2028 Full Info' not found` error — create it in ARMS first, or
-update `layoutOptionText` in `scripts/config.json` to match whatever it's
-actually called.
+The `"2028 Full Info"` layout is confirmed working (a real run landed
+1,991 rows in `arms`, deduped by `grad_year, full_name` — the real export
+does contain some duplicate rows, handled automatically). `"2027 Full
+Info"` was just added and hasn't had a real run yet, but is the original
+layout `arms_automation_27` already used successfully for years. If ARMS
+ever renames a layout, the script fails with a clear
+`layout '...' not found` error naming which one — update
+`layoutOptionText` for that export in `scripts/config.json` to match.
 
 **Setup:**
 1. Run `sql/players.sql` in the Supabase SQL editor (defines
