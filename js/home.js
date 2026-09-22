@@ -7,9 +7,12 @@
 
   async function render() {
     grid.innerHTML = "";
-    const results = await Promise.all(
-      window.COACHES.map((coach) => window.getCoachDashboardData(coach.id))
-    );
+    // Fetched together (not one after the other) so cards + tracker appear
+    // in the same paint instead of visibly popping in two stages.
+    const [results, progress] = await Promise.all([
+      Promise.all(window.COACHES.map((coach) => window.getCoachDashboardData(coach.id))),
+      window.getSeasonProgress(),
+    ]);
 
     window.COACHES.forEach((coach, i) => {
       const data = results[i];
@@ -43,12 +46,12 @@
       grid.appendChild(card);
     });
 
-    renderTracker();
+    renderTracker(progress);
   }
 
-  async function renderTracker() {
+  function renderTracker(progress) {
     if (!trackerEl) return;
-    const { contacted, total } = await window.getSeasonProgress();
+    const { contacted, total } = progress;
     const pct = total > 0 ? Math.round((contacted / total) * 100) : 0;
 
     trackerEl.innerHTML = `
