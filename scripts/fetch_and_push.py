@@ -98,18 +98,31 @@ def upsert_arms_rows(df: pd.DataFrame, grad_year: str, source_export: str):
     if "Full Name" not in df.columns:
         raise RuntimeError("Export has no 'Full Name' column — can't key rows for Supabase upsert.")
 
-    records = []
+    # Keyed by (grad_year, full_name) so a duplicate row later in the export
+    # overwrites the earlier one instead of both landing in the same
+    # upsert batch — Postgres's ON CONFLICT DO UPDATE errors
+    # ("cannot affect row a second time") if two rows in one batch target
+    # the same conflict key.
+    records_by_key = {}
+    dupes = 0
     for _, row in df.iterrows():
         full_name = str(row.get("Full Name", "")).strip()
         if not full_name:
             continue
-        records.append({
+        key = (grad_year, full_name)
+        if key in records_by_key:
+            dupes += 1
+        records_by_key[key] = {
             "grad_year": grad_year,
             "full_name": full_name,
             "data": json.loads(row.to_json()),
             "source_export": source_export,
-        })
+        }
 
+    if dupes:
+        print(f"[warn] {dupes} duplicate (grad_year, full_name) rows in export — kept the last one for each.")
+
+    records = list(records_by_key.values())
     if not records:
         return 0
 
