@@ -155,6 +155,30 @@ clear `layout '...' not found` error — update `layoutOptionText` in
    (`workflow_dispatch`) once the secrets above are set — it won't fire on
    its own outside the monthly schedule.
 
+### Nightly recruit queue rollover (`scripts/nightly_queue.py`)
+
+Each player in a monthly players table has a `queue_status`
+(`pending` → `active` → `contacted`), set by `import_players.py` and moved
+along by this script, run nightly by
+`.github/workflows/nightly-queue.yml` (1am Eastern — two schedules split
+across DST, see comments in that file):
+
+1. Any `active` player who was checked off gets marked `contacted` and
+   permanently drops out of the active pool.
+2. Any `active` player left unchecked stays `active`, untouched — they
+   carry over onto today's list instead of being reassigned.
+3. Each coach is topped back up to *carryover + 5* by activating their next
+   5 `pending` players (in `sort_order`). Miss quota one day, and today's
+   list is bigger by exactly the leftover — same rule `js/mock-data.js`'s
+   rollover chain describes, just backed by real state.
+
+"Today's target" and "today's done" for a coach are just
+`count(active)`/`count(active and checked)` — no separate counter is
+stored. Doesn't touch anything calendar-related; that's still separate.
+Safe to trigger manually (`workflow_dispatch`, or `python nightly_queue.py`
+locally with `DATABASE_URL` set) to test — it only needs that one secret,
+no ARMS/Google credentials.
+
 ### Direct database access (`DATABASE_URL`)
 
 `scripts/fetch_and_push.py`, `scripts/fetch_calendar.py`, and
