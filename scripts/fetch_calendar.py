@@ -127,6 +127,25 @@ def _calendar_service():
     return build("calendar", "v3", credentials=creds)
 
 
+def diagnose():
+    """
+    python fetch_calendar.py --diagnose
+    Lists every calendar this service account currently has access to,
+    straight from Google — independent of whatever CALENDAR_ID we've
+    configured. Doesn't touch Supabase. Useful whenever a calendar 404s:
+    tells you definitively whether sharing actually took effect, and
+    exactly what id/name Google has on file for it.
+    """
+    service = _calendar_service()
+    items = service.calendarList().list().execute().get("items", [])
+    if not items:
+        print("[diagnose] This service account has ZERO calendars shared with it right now.")
+        return
+    print(f"[diagnose] This service account currently sees {len(items)} calendar(s):")
+    for item in items:
+        print(f"  - id={item.get('id')!r} summary={item.get('summary')!r} access_role={item.get('accessRole')!r}")
+
+
 def _check_access(service, label, cal_id):
     try:
         service.calendars().get(calendarId=cal_id).execute()
@@ -226,6 +245,9 @@ def upsert_events(events):
 
 
 def main():
+    if "--diagnose" in sys.argv:
+        diagnose()
+        return
     ensure_calendar_events_table()
     events = fetch_events()
     n = upsert_events(events)

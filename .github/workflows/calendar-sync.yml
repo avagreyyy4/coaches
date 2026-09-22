@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "0 */6 * * *" # every 6 hours
   workflow_dispatch:
+    inputs:
+      diagnose:
+        description: "List calendars the service account can see, instead of syncing"
+        type: boolean
+        default: false
 
 concurrency:
   group: staff-calendar-sync
@@ -37,4 +42,4 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: python fetch_calendar.py
+        run: python fetch_calendar.py ${{ inputs.diagnose && '--diagnose' || '' }}
