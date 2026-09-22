@@ -13,13 +13,16 @@
 # unchanged from the original. Runs monthly (see .github/workflows), since
 # ARMS data doesn't need to be pulled daily.
 
-import asyncio, json, os, re, tempfile
+import asyncio, json, os, re, sys, tempfile
 from pathlib import Path
 from typing import Dict, List, Optional
 import pandas as pd
 from supabase import create_client
 from dotenv import load_dotenv
 from playwright.async_api import async_playwright, TimeoutError as PWTimeout
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from db import get_connection
 
 load_dotenv()
 
@@ -42,6 +45,7 @@ if not ARMS_PASS: missing.append("ARMS_PASSWORD/ARMS_PASS")
 if not (ARMS_BASE or ARMS_LOGIN_URL): missing.append("ARMS_BASE_URL or ARMS_LOGIN_URL")
 if not SUPABASE_URL: missing.append("SUPABASE_URL")
 if not SUPABASE_SERVICE_ROLE_KEY: missing.append("SUPABASE_SERVICE_ROLE_KEY")
+if not os.getenv("DATABASE_URL"): missing.append("DATABASE_URL")
 if missing:
     raise SystemExit(f"[fatal] Missing required env: {', '.join(missing)}")
 if not ARMS_LOGIN_URL:
@@ -49,6 +53,37 @@ if not ARMS_LOGIN_URL:
 
 # ===================== SUPABASE HELPERS =====================
 _sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+def ensure_arms_table():
+    """Idempotent: mirrors sql/arms.sql. Lets this script bootstrap a fresh
+    Supabase project on its own, same as sql/arms.sql run by hand."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                create table if not exists public.arms (
+                  id uuid primary key default gen_random_uuid(),
+                  grad_year text not null,
+                  full_name text not null,
+                  data jsonb not null default '{}'::jsonb,
+                  source_export text,
+                  synced_at timestamptz not null default now(),
+                  unique (grad_year, full_name)
+                );
+            """)
+            cur.execute("""
+                create index if not exists arms_full_name_normalized_idx
+                  on public.arms (lower(trim(full_name)));
+            """)
+            cur.execute("alter table public.arms enable row level security;")
+            cur.execute('drop policy if exists "Authenticated coaches can read arms" on public.arms;')
+            cur.execute("""
+                create policy "Authenticated coaches can read arms"
+                  on public.arms for select to authenticated using (true);
+            """)
+    finally:
+        conn.close()
+
 
 def upsert_arms_rows(df: pd.DataFrame, grad_year: str, source_export: str):
     """
@@ -710,6 +745,8 @@ async def do_one_export(page, exp: Dict):
 
 
 async def run():
+    ensure_arms_table()
+
     cfg_path = Path(__file__).with_name("config.json")
     with cfg_path.open() as f:
         config = json.load(f)

@@ -10,12 +10,16 @@
 
 import json
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from supabase import create_client
 from dotenv import load_dotenv
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from db import get_connection
 
 load_dotenv()
 
@@ -50,10 +54,71 @@ if not GOOGLE_CALENDAR_SA_JSON: missing.append("GOOGLE_CALENDAR_SA_JSON")
 if not SUPABASE_URL: missing.append("SUPABASE_URL")
 if not SUPABASE_SERVICE_ROLE_KEY: missing.append("SUPABASE_SERVICE_ROLE_KEY")
 if not CALENDAR_SOURCES: missing.append("STAFF_CALENDAR_ID and/or WBB_CALENDAR_ID")
+if not os.getenv("DATABASE_URL"): missing.append("DATABASE_URL")
 if missing:
     raise SystemExit(f"[fatal] Missing required env: {', '.join(missing)}")
 
 _sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+
+def ensure_calendar_events_table():
+    """Idempotent: mirrors sql/calendar_events.sql. Lets this script
+    bootstrap a fresh Supabase project on its own."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                create table if not exists public.calendar_events (
+                  id uuid primary key default gen_random_uuid(),
+                  calendar_id text,
+                  calendar_name text,
+                  uid text not null,
+                  title text,
+                  description text,
+                  location text,
+                  start_at timestamptz not null,
+                  end_at timestamptz,
+                  all_day boolean not null default false,
+                  synced_at timestamptz not null default now()
+                );
+            """)
+            cur.execute("""
+                alter table public.calendar_events add column if not exists calendar_id text;
+            """)
+            cur.execute("""
+                alter table public.calendar_events add column if not exists calendar_name text;
+            """)
+            cur.execute("""
+                update public.calendar_events set calendar_id = coalesce(calendar_id, '') where calendar_id is null;
+            """)
+            cur.execute("""
+                alter table public.calendar_events alter column calendar_id set not null;
+            """)
+            cur.execute("""
+                alter table public.calendar_events drop constraint if exists calendar_events_uid_start_at_key;
+            """)
+            cur.execute("""
+                alter table public.calendar_events drop constraint if exists calendar_events_calendar_id_uid_start_at_key;
+            """)
+            cur.execute("""
+                alter table public.calendar_events
+                  add constraint calendar_events_calendar_id_uid_start_at_key
+                  unique (calendar_id, uid, start_at);
+            """)
+            cur.execute("""
+                create index if not exists calendar_events_start_at_idx
+                  on public.calendar_events (start_at);
+            """)
+            cur.execute("alter table public.calendar_events enable row level security;")
+            cur.execute(
+                'drop policy if exists "Authenticated coaches can read calendar_events" on public.calendar_events;'
+            )
+            cur.execute("""
+                create policy "Authenticated coaches can read calendar_events"
+                  on public.calendar_events for select to authenticated using (true);
+            """)
+    finally:
+        conn.close()
 
 
 def _calendar_service():
@@ -161,6 +226,7 @@ def upsert_events(events):
 
 
 def main():
+    ensure_calendar_events_table()
     events = fetch_events()
     n = upsert_events(events)
     print(f"[info] upserted {n:,} calendar_events rows from: {', '.join(CALENDAR_SOURCES.keys())}")

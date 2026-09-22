@@ -46,29 +46,62 @@ dropped once the coach pages are wired to real data.
    (Authentication → Providers → Email) and create the three accounts
    yourself instead.
 
-## Data architecture: two Supabase tables + a join
+## Data architecture
 
-- **`arms`** (`sql/arms.sql`) — the full ARMS export for grad year 2028,
-  refreshed monthly by `scripts/fetch_and_push.py`. This is ARMS's entire
-  recruit pool, not just players you're tracking.
-- **`players`** (`sql/players.sql`) — the actual roster: the list you enter
-  yourself from what coaches give you, one row per player with an
-  `assigned_coach` (`ty` / `allie` / `kiz`). **Entering rows here is meant
-  to happen directly in the Supabase Table Editor** — there's no in-app
-  entry form yet. Say the word if you'd rather have a page for that instead.
-- **`player_arms_match`** (a view, defined in `sql/players.sql`) — joins the
-  two on normalized full name (`first_name + " " + last_name`, case/
-  whitespace-insensitive) so each tracked player comes back enriched with
-  whatever ARMS has on them (`arms_data`, plus `matched_in_arms` telling you
-  if no ARMS row matched at all).
+- **`arms`** (`sql/arms.sql`, auto-created by `scripts/fetch_and_push.py`)
+  — the full ARMS export for grad year 2028, refreshed monthly. This is
+  ARMS's entire recruit pool, not just players being tracked.
+- **A monthly players table** (`sep_players`, `oct_players`, ...) — the
+  actual roster, imported from a CSV you hand-manage locally by
+  `scripts/import_players.py` (see below). Each month is its own table;
+  it doesn't carry over from the previous month.
+- **`current_players`** — a view `import_players.py` repoints at whichever
+  month's table is currently active. The site and the join below always
+  read through this view, so nothing about the site changes month to
+  month — only which real table `current_players` points at.
+- **`player_arms_match`** (`sql/players.sql`) — joins `current_players`
+  against `arms` on normalized full name (case/whitespace-insensitive) so
+  each tracked player comes back enriched with whatever ARMS has on them
+  (`arms_data`, plus `matched_in_arms` telling you if no ARMS row matched).
 
-Which fields count as "missing," and which get highlighted (you mentioned
-phone number and hometown/state specifically) still needs to be wired into
-the frontend — that logic depends on ARMS's actual export column names
-inside `arms_data`, which we won't know until a real sync has run. Once
-today's manual trigger produces real rows, I can look at the actual JSON
-keys and wire the coach pages to read from `player_arms_match` instead of
-`js/mock-data.js`.
+Which fields count as "missing," and which get highlighted (phone number
+and hometown/state specifically) still needs to be wired into the
+frontend — that logic depends on ARMS's actual export column names inside
+`arms_data`, which we won't know until a real sync has run. `js/mock-data.js`
+and the "MISSING:" field logic on the coach pages are still placeholder
+data — wiring them to `player_arms_match` is the next step once there's
+real data on both sides to look at.
+
+### Player roster import (`scripts/import_players.py`) — local only
+
+Reads a roster CSV and loads it into Supabase. **This script only ever
+runs on your own machine** — the CSV (real recruit names) is never
+committed to the repo and never touches GitHub Actions.
+
+The table name comes straight from the filename: `sep_players.csv`
+becomes table `sep_players`, `oct_players.csv` becomes `oct_players`, etc.
+Coach codes in the CSV's `Coach` column are mapped to our coach ids in
+`COACH_MAP` at the top of the script — currently `TC` → Ty, `KG` → Kiz,
+`ABC` → Allie; update that dict if the codes ever change.
+
+Fully automated — the script creates the table (with RLS/policies) itself
+if it doesn't exist yet, and repoints `current_players` at it, using a
+direct Postgres connection (`DATABASE_URL`, see below). No manual SQL
+required. Safe to re-run: re-importing an updated CSV only touches roster
+fields (name, coach, phone, rank, grad year, sort order) for players
+already in the table — it never resets `queue_status`/`checked`/
+`activated_at`/`contacted_at` for someone already being worked.
+
+Each month is a clean start: nothing carries over automatically from the
+previous month's table into the new one.
+
+**Usage:**
+```
+cd scripts
+python import_players.py ../data/sep_players.csv
+```
+Put the CSV anywhere outside git tracking — `data/` and
+`scripts/*_players.csv` are both gitignored.
 
 ### Ingestion script (`scripts/`)
 
@@ -91,20 +124,39 @@ update `layoutOptionText` in `scripts/config.json` to match whatever it's
 actually called.
 
 **Setup:**
-1. Run `sql/arms.sql` then `sql/players.sql` in the Supabase SQL editor.
+1. Run `sql/players.sql` in the Supabase SQL editor (defines
+   `player_arms_match`; needs `current_players` to already exist — run
+   `import_players.py` at least once first, see above). `sql/arms.sql` is
+   no longer required — the script creates that table itself now — but is
+   kept as a reference for what the table looks like.
 2. In this repo's GitHub Settings → Secrets and variables → Actions, add:
    `ARMS_USERNAME`, `ARMS_PASSWORD`, `ARMS_BASE_URL` (or `ARMS_LOGIN_URL`),
-   `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` (the **secret** key from
+   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (the **secret** key from
    Supabase → Settings → API — not the publishable key already in
-   `js/config.js`, and never put the secret key in any frontend file).
+   `js/config.js`), and `DATABASE_URL` (see "Direct database access" below).
 3. `.github/workflows/arms-ingest.yml` runs on the 1st of each month at 7am
    UTC. For today's run, trigger it manually from the repo's Actions tab
    (`workflow_dispatch`) once the secrets above are set — it won't fire on
    its own outside the monthly schedule.
 
-`js/mock-data.js` and the "MISSING:" field logic on the coach pages are
-still placeholder data — wiring them to `player_arms_match` is the next
-step once there's real data to look at.
+### Direct database access (`DATABASE_URL`)
+
+`scripts/fetch_and_push.py`, `scripts/fetch_calendar.py`, and
+`scripts/import_players.py` all create their own tables (and RLS
+policies) automatically on first run — none of them need you to run SQL
+by hand anymore for that part. The Supabase REST API
+(`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`) can't run `CREATE TABLE`, so
+this needs a direct Postgres connection instead:
+
+Supabase dashboard → **Project Settings → Database → Connection string**
+→ **Session pooler** tab → copy the URI, then substitute in your actual
+database password (found/reset on that same page — this is a separate
+password from any API key) in place of `[YOUR-PASSWORD]`.
+
+Add the result as `DATABASE_URL`: in `scripts/.env` for local runs, and as
+a GitHub Actions secret for `arms-ingest.yml`/`calendar-sync.yml`. Just as
+sensitive as the service-role key — never in the frontend, never
+committed.
 
 ### Calendar sync (`scripts/fetch_calendar.py`)
 
@@ -139,12 +191,14 @@ secret for it, and add `"Foo": os.getenv("FOO_CALENDAR_ID")` to
    `xxx@your-project.iam.gserviceaccount.com`), permission **"See all event
    details"** (view-only). Then copy its **Calendar ID** (that calendar's
    settings → Integrate calendar → Calendar ID — not the iCal address).
-3. Run `sql/calendar_events.sql` in the Supabase SQL editor.
+3. `sql/calendar_events.sql` is no longer required — the script creates
+   that table itself — but is kept as a reference for what it looks like.
 4. Add secrets to this repo's GitHub Actions secrets:
    - `GOOGLE_CALENDAR_SA_JSON` — paste the **entire contents** of the
      downloaded JSON key file. Never commit that JSON file anywhere in
      this repo.
    - `STAFF_CALENDAR_ID` and `WBB_CALENDAR_ID` — each calendar's own ID
+   - `DATABASE_URL` — see "Direct database access" above
      from step 2.
 5. `.github/workflows/calendar-sync.yml` runs every 6 hours, or trigger it
    manually from the Actions tab.
