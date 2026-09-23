@@ -1,12 +1,12 @@
 // Eastern-time date helpers + the coach roster, shared by the home page and
-// every coach page. Per-day calendar history is intentionally left empty —
-// there's no real day-by-day log table yet (see js/data.js for what IS
-// wired to real data: today's recruit queue + the season tracker).
+// every coach page. `name` is each coach's abbreviation — the same string
+// used on the synced calendar to tag which coach an event belongs to (see
+// js/data.js's getCalendarEvents / coach-dashboard.js's event-chip coloring).
 (function () {
   window.COACHES = [
-    { id: "ty", name: "Ty" },
-    { id: "allie", name: "Allie" },
-    { id: "kiz", name: "Kiz" },
+    { id: "ty", name: "TC" },
+    { id: "allie", name: "ABC" },
+    { id: "kiz", name: "KG" },
   ];
 
   // ---- Eastern-time "today", independent of the viewer's own timezone ----

@@ -1,6 +1,5 @@
 // Real Supabase-backed data: today's recruit queue per coach, checking a
-// recruit off, and the season-wide tracker. Calendar history stays mocked
-// out (js/calendar.js) — deliberately not part of this.
+// recruit off, the season-wide tracker, and synced calendar events.
 (function () {
   // Keep in sync with scripts/nightly_queue.py's copy — separate runtimes,
   // no shared source of truth.
@@ -91,5 +90,36 @@
       return { contacted: 0, total: 0 };
     }
     return { contacted, total };
+  };
+
+  // Events with start_at in [startDate, endDateExclusive), grouped by the
+  // calendar day (YYYY-MM-DD) callers key their day columns with (see
+  // window.isoDate in calendar.js — local-Date-based, same basis the
+  // calendar grid itself uses for day boundaries).
+  //
+  // all-day events are the one exception: fetch_calendar.py deliberately
+  // stores them as literal UTC midnight of that calendar day (not a real
+  // instant), so bucketing those by local time would shift them a day
+  // early anywhere west of UTC. They're bucketed by their stored UTC date
+  // directly instead; timed events are converted to local time first.
+  window.getCalendarEvents = async function (startDate, endDateExclusive) {
+    const { data, error } = await window.supabaseClient
+      .from("calendar_events")
+      .select("calendar_name,title,start_at,end_at,all_day")
+      .gte("start_at", startDate.toISOString())
+      .lt("start_at", endDateExclusive.toISOString())
+      .order("start_at", { ascending: true });
+
+    if (error) {
+      console.error("[data] failed to load calendar_events:", error.message);
+      return {};
+    }
+
+    const byDate = {};
+    data.forEach((ev) => {
+      const iso = ev.all_day ? ev.start_at.slice(0, 10) : window.isoDate(new Date(ev.start_at));
+      (byDate[iso] || (byDate[iso] = [])).push(ev);
+    });
+    return byDate;
   };
 })();

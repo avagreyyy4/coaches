@@ -163,7 +163,7 @@
 
 .coach-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.5fr 1fr;
   gap: 1.75rem;
   align-items: start;
 }
@@ -257,50 +257,49 @@
 .cal-nav-btn:hover,
 .cal-today-btn:hover { border-color: var(--navy); color: var(--navy); }
 
-/* Day-row view (3-day / 5-day) */
-.calendar-days-row {
+/* Day-row view (3-day / 5-day): one continuous Google-Calendar-style grid —
+   header, all-day row and the hour grid all share the same column template
+   (gutter + N day columns) so every day's header sits exactly above its own
+   column, with nothing boxed off as a separate component. */
+.time-grid-header {
   display: grid;
-  gap: 0.6rem;
+  grid-template-columns: 3.2rem repeat(var(--tg-cols, 5), 1fr);
+  gap: 0.4rem;
+  padding-bottom: 0.6rem;
+  margin-bottom: 0.4rem;
+  border-bottom: 1px solid var(--gray-100);
 }
-.calendar-days-row[data-count="3"] { grid-template-columns: repeat(3, 1fr); }
-.calendar-days-row[data-count="5"] { grid-template-columns: repeat(5, 1fr); }
-
-.day-card {
-  border: 1px solid var(--gray-100);
-  border-radius: var(--radius-sm);
-  padding: 0.85rem 0.75rem;
-  min-height: 6.75rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+.time-grid-day-header {
+  text-align: center;
 }
-.day-card-weekday {
+.time-grid-day-header .tg-weekday {
   font-size: 0.72rem;
   color: var(--gray-500);
   font-weight: 500;
 }
-.day-card-date {
+.time-grid-day-header .tg-date {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  margin-top: 0.2rem;
+  border-radius: 50%;
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: 600;
   color: var(--gray-900);
-  margin-top: 0.1rem;
   font-variant-numeric: tabular-nums;
 }
-.day-card-stat {
-  font-size: 0.82rem;
+.time-grid-day-header .tg-stat {
+  font-size: 0.68rem;
   font-weight: 600;
-  margin-top: 0.6rem;
+  margin-top: 0.2rem;
   color: var(--gray-500);
   font-variant-numeric: tabular-nums;
 }
-
-.day-card.today { background: var(--columbia-blue); border-color: var(--columbia-blue); }
-.day-card.today .day-card-weekday { color: var(--navy); }
-.day-card.today .day-card-date { color: var(--navy); }
-.day-card.today .day-card-stat { color: var(--navy); }
-
-.day-card.future .day-card-date { color: var(--gray-500); }
+.time-grid-day-header.today .tg-date { background: var(--navy); color: var(--white); }
+.time-grid-day-header.today .tg-stat { color: var(--navy); }
 
 /* Month view */
 .calendar-grid {
@@ -316,22 +315,28 @@
   font-weight: 500;
 }
 .calendar-day {
-  aspect-ratio: 1;
+  min-height: 5.75rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--gray-100);
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--gray-900);
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0.3rem 0.3rem 0.35rem;
   background: var(--white);
-  font-variant-numeric: tabular-nums;
   cursor: pointer;
   transition: background-color 140ms ease, border-color 140ms ease;
 }
 .calendar-day.empty { border: none; background: transparent; cursor: default; }
+
+.calendar-day-date {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--gray-900);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  flex-shrink: 0;
+}
 
 .calendar-day:not(.empty):not(.today):hover,
 .calendar-day:not(.empty):not(.today):focus-visible {
@@ -342,8 +347,151 @@
 .calendar-day.today {
   background: var(--columbia-blue);
   border-color: var(--columbia-blue);
+}
+.calendar-day.today .calendar-day-date {
   color: var(--navy);
   font-weight: 700;
+}
+
+/* ---- Synced calendar events (soft Google-Calendar-style pills) ---- */
+.day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.3rem;
+  overflow: hidden;
+}
+.day-events-more {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  padding-left: 0.2rem;
+}
+
+.event-chip {
+  background: var(--gray-100);
+  color: var(--gray-500);
+  font-family: var(--font);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.3;
+  padding: 0.14rem 0.4rem;
+  border-radius: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform-origin: center left;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+.event-chip:hover {
+  transform: scale(1.07);
+  box-shadow: 0 6px 14px -6px rgba(29, 46, 91, 0.4);
+}
+.event-chip-mine {
+  background: var(--navy);
+  color: var(--white);
+}
+@media (prefers-reduced-motion: reduce) {
+  .event-chip { transition: none; }
+  .event-chip:hover { transform: none; }
+}
+
+/* ---- Time grid (3-day / 5-day): events positioned + sized by time ---- */
+.time-grid-wrap { margin-top: 0.9rem; }
+
+.time-grid-allday {
+  display: grid;
+  grid-template-columns: 3.2rem repeat(var(--tg-cols, 5), 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+.time-grid-allday-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  align-self: center;
+}
+.time-grid-allday-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-height: 1.4rem;
+}
+
+.time-grid-scroll {
+  max-height: 26rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--gray-100);
+}
+
+.time-grid-body {
+  display: grid;
+  grid-template-columns: 3.2rem repeat(var(--tg-cols, 5), 1fr);
+  gap: 0.4rem;
+}
+
+.time-grid-hours { position: relative; }
+.time-grid-hour-label {
+  position: absolute;
+  right: 0.4rem;
+  transform: translateY(-50%);
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  white-space: nowrap;
+}
+
+.time-grid-col {
+  position: relative;
+  border-left: 1px solid var(--gray-100);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--gray-100) 0,
+    var(--gray-100) 1px,
+    transparent 1px,
+    transparent 48px
+  );
+}
+
+.time-event {
+  position: absolute;
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  font-family: var(--font);
+  font-size: 0.64rem;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background: var(--gray-100);
+  color: var(--gray-500);
+  box-shadow: 0 1px 3px rgba(29, 46, 91, 0.18);
+  transition: width 140ms ease, left 140ms ease, height 140ms ease, box-shadow 140ms ease;
+  cursor: default;
+}
+.time-event:hover,
+.time-event:focus-visible {
+  /* Expand to the full day column — overriding the inline top/left/width/
+     height the time grid sets for normal (possibly side-by-side-split)
+     layout — so the whole title is readable even when another event sits
+     right next to it. !important is intentional: nothing but :hover should
+     ever win this fight against the inline layout styles. */
+  width: calc(100% - 4px) !important;
+  left: 2px !important;
+  height: auto !important;
+  min-height: var(--slot-height, 100%) !important;
+  white-space: normal;
+  overflow: visible;
+  z-index: 30;
+  box-shadow: 0 10px 26px -8px rgba(29, 46, 91, 0.5);
+}
+.time-event.event-chip-mine {
+  background: var(--navy);
+  color: var(--white);
+}
+@media (prefers-reduced-motion: reduce) {
+  .time-event { transition: none; }
 }
 
 
