@@ -136,6 +136,8 @@ def diagnose():
     tells you definitively whether sharing actually took effect, and
     exactly what id/name Google has on file for it.
     """
+    info = json.loads(GOOGLE_CALENDAR_SA_JSON)
+    print(f"[diagnose] Authenticating as service account: {info.get('client_email')!r}")
     service = _calendar_service()
     items = service.calendarList().list().execute().get("items", [])
     if not items:
