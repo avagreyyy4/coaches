@@ -22,6 +22,14 @@
     return !!title && coachCodePattern.test(title);
   }
 
+  // Color an event by which calendar it's the coach's own on: navy for
+  // WBB, light blue for Staff, washed gray for anything not theirs.
+  function eventColorClass(ev) {
+    if (!isCoachEvent(ev.title)) return "";
+    if (ev.calendar_name === "Staff") return " ev-mine-staff";
+    return " ev-mine-wbb"; // WBB, and the default for any calendar added later
+  }
+
   async function render() {
     document.getElementById("coach-name").textContent = coach.name;
 
@@ -110,7 +118,7 @@
   // ---- Event chips (Google-Calendar-style soft pills) ----
   function buildEventChip(ev) {
     const chip = document.createElement("div");
-    chip.className = "event-chip" + (isCoachEvent(ev.title) ? " event-chip-mine" : "");
+    chip.className = "event-chip" + eventColorClass(ev);
     chip.textContent = ev.title || "(untitled)";
     chip.title = ev.title || "(untitled)";
     return chip;
@@ -301,9 +309,9 @@
     }
     body.appendChild(hours);
 
-    timedByDay.forEach((dayTimed) => {
+    timedByDay.forEach((dayTimed, i) => {
       const col = document.createElement("div");
-      col.className = "time-grid-col";
+      col.className = "time-grid-col" + (window.isoDate(days[i]) === todayISO ? " today" : "");
       col.style.height = `${totalHeight}px`;
 
       const laidOut = layoutOverlaps(dayTimed);
@@ -317,7 +325,7 @@
         const left = colIndex * width;
 
         const block = document.createElement("div");
-        block.className = "time-event" + (isCoachEvent(ev.title) ? " event-chip-mine" : "");
+        block.className = "time-event" + eventColorClass(ev);
         block.tabIndex = 0; // keyboard users can Tab to an event to expand+read it too
         block.style.top = `${top}px`;
         block.style.height = `${height}px`;

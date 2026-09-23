@@ -163,7 +163,7 @@
 
 .coach-layout {
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
+  grid-template-columns: 1.85fr 1fr;
   gap: 1.75rem;
   align-items: start;
 }
@@ -177,6 +177,9 @@
   border-radius: 10px;
   padding: 1.5rem;
   box-shadow: 0 10px 26px -12px rgba(29, 46, 91, 0.26);
+}
+.calendar-panel {
+  border-top: 3px solid var(--columbia-blue);
 }
 
 .recruits-panel h2 {
@@ -369,7 +372,7 @@
 }
 
 .event-chip {
-  background: var(--gray-100);
+  background: rgba(92, 102, 117, 0.14);
   color: var(--gray-500);
   font-family: var(--font);
   font-size: 0.68rem;
@@ -387,13 +390,49 @@
   transform: scale(1.07);
   box-shadow: 0 6px 14px -6px rgba(29, 46, 91, 0.4);
 }
-.event-chip-mine {
-  background: var(--navy);
-  color: var(--white);
-}
 @media (prefers-reduced-motion: reduce) {
   .event-chip { transition: none; }
   .event-chip:hover { transform: none; }
+}
+
+/* Coach-tagged events, colored by which calendar they came from */
+.event-chip.ev-mine-wbb,
+.time-event.ev-mine-wbb {
+  background: var(--navy);
+  color: var(--white);
+}
+.event-chip.ev-mine-staff,
+.time-event.ev-mine-staff {
+  background: var(--columbia-blue);
+  color: var(--navy);
+}
+
+/* ---- Calendar legend ---- */
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: -0.3rem 0 0.9rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--gray-500);
+}
+.calendar-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.calendar-legend-swatch {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 3px;
+  display: inline-block;
+}
+.calendar-legend-swatch.wbb { background: var(--navy); }
+.calendar-legend-swatch.staff { background: var(--columbia-blue); }
+.calendar-legend-swatch.other {
+  background: rgba(92, 102, 117, 0.14);
+  border: 1px solid var(--gray-100);
 }
 
 /* ---- Time grid (3-day / 5-day): events positioned + sized by time ---- */
@@ -443,14 +482,17 @@
 
 .time-grid-col {
   position: relative;
-  border-left: 1px solid var(--gray-100);
+  border-left: 1px solid var(--blue-tint-2);
   background-image: repeating-linear-gradient(
     to bottom,
-    var(--gray-100) 0,
-    var(--gray-100) 1px,
+    var(--blue-tint-2) 0,
+    var(--blue-tint-2) 1px,
     transparent 1px,
     transparent 48px
   );
+}
+.time-grid-col.today {
+  background-color: var(--blue-tint);
 }
 
 .time-event {
@@ -464,7 +506,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  background: var(--gray-100);
+  background: rgba(92, 102, 117, 0.14);
   color: var(--gray-500);
   box-shadow: 0 1px 3px rgba(29, 46, 91, 0.18);
   transition: width 140ms ease, left 140ms ease, height 140ms ease, box-shadow 140ms ease;
@@ -485,10 +527,6 @@
   overflow: visible;
   z-index: 30;
   box-shadow: 0 10px 26px -8px rgba(29, 46, 91, 0.5);
-}
-.time-event.event-chip-mine {
-  background: var(--navy);
-  color: var(--white);
 }
 @media (prefers-reduced-motion: reduce) {
   .time-event { transition: none; }
