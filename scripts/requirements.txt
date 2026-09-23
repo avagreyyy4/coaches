@@ -7,3 +7,6 @@ pyarrow
 google-api-python-client
 google-auth
 psycopg2-binary
+requests
+icalendar
+recurring-ical-events
