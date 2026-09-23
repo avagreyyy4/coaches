@@ -178,7 +178,8 @@
   padding: 1.5rem;
   box-shadow: 0 10px 26px -12px rgba(29, 46, 91, 0.26);
 }
-.calendar-panel {
+.calendar-panel,
+.recruits-panel {
   border-top: 3px solid var(--columbia-blue);
 }
 
@@ -307,7 +308,11 @@
 /* Month view */
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  /* minmax(0, 1fr), not bare 1fr: a bare 1fr track still won't shrink
+     below its content's min-content width, so a day with a long event
+     title was pushing that whole column wider and squeezing the others
+     (Thu/Fri looked "smaller" only because Tue/Wed had longer text). */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0.35rem;
 }
 .calendar-weekday {
@@ -372,7 +377,7 @@
 }
 
 .event-chip {
-  background: rgba(92, 102, 117, 0.14);
+  background: var(--gray-50);
   color: var(--gray-500);
   font-family: var(--font);
   font-size: 0.68rem;
@@ -431,7 +436,7 @@
 .calendar-legend-swatch.wbb { background: var(--navy); }
 .calendar-legend-swatch.staff { background: var(--columbia-blue); }
 .calendar-legend-swatch.other {
-  background: rgba(92, 102, 117, 0.14);
+  background: var(--gray-50);
   border: 1px solid var(--gray-100);
 }
 
@@ -495,6 +500,27 @@
   background-color: var(--blue-tint);
 }
 
+/* Current-time indicator, Google-Calendar style */
+.time-grid-now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--flag);
+  z-index: 15;
+  pointer-events: none;
+}
+.time-grid-now-dot {
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--flag);
+}
+
 .time-event {
   position: absolute;
   border-radius: 4px;
@@ -506,7 +532,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  background: rgba(92, 102, 117, 0.14);
+  background: var(--gray-50);
   color: var(--gray-500);
   box-shadow: 0 1px 3px rgba(29, 46, 91, 0.18);
   transition: width 140ms ease, left 140ms ease, height 140ms ease, box-shadow 140ms ease;

@@ -65,9 +65,14 @@
     if (state.view === "month") {
       state.anchor = new Date(state.anchor.getFullYear(), state.anchor.getMonth() + direction, 1);
     } else {
-      const count = state.view === "3day" ? 3 : 5;
-      state.anchor = window.addDays(state.anchor, direction * count);
+      state.anchor = window.addDays(state.anchor, direction * viewDayCount(state.view));
     }
+  }
+
+  function viewDayCount(view) {
+    if (view === "1day") return 1;
+    if (view === "3day") return 3;
+    return 5;
   }
 
   async function renderCalendar() {
@@ -82,6 +87,13 @@
     // superseded view/anchor can't clobber a newer one.
     const requestToken = (state.renderToken = (state.renderToken || 0) + 1);
 
+    // Only one live now-line timer should ever be running, and only while
+    // a day-row view (with a now-line to update) is actually on screen.
+    if (state.nowLineTimer) {
+      clearInterval(state.nowLineTimer);
+      state.nowLineTimer = null;
+    }
+
     if (state.view === "month") {
       label.textContent = state.anchor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
       const year = state.anchor.getFullYear();
@@ -93,7 +105,7 @@
       body.innerHTML = "";
       body.appendChild(buildMonthGrid(year, month, eventsByDate));
     } else {
-      const count = state.view === "3day" ? 3 : 5;
+      const count = viewDayCount(state.view);
       label.textContent = formatDayRangeLabel(state.anchor, count);
       const rangeStart = state.anchor;
       const rangeEnd = window.addDays(state.anchor, count);
@@ -106,10 +118,22 @@
         // Open scrolled to roughly 8 AM rather than the top of the range.
         timeGrid.scrollEl.scrollTop = Math.max(0, (8 - timeGrid.startHour) * PX_PER_HOUR - 24);
       });
+
+      const nowLineEl = timeGrid.el.querySelector(".time-grid-now-line");
+      if (nowLineEl) {
+        state.nowLineTimer = setInterval(() => {
+          const now = new Date();
+          const nowMin = now.getHours() * 60 + now.getMinutes();
+          nowLineEl.style.top = `${((nowMin - timeGrid.startHour * 60) / 60) * PX_PER_HOUR}px`;
+        }, 60000);
+      }
     }
   }
 
   function formatDayRangeLabel(start, count) {
+    if (count === 1) {
+      return start.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+    }
     const end = window.addDays(start, count - 1);
     const opts = { month: "short", day: "numeric" };
     return `${start.toLocaleDateString("en-US", opts)} – ${end.toLocaleDateString("en-US", opts)}`;
@@ -229,6 +253,16 @@
       return timed;
     });
 
+    // Extend the range to include right now too, if today is visible —
+    // same reasoning as extending for events: never clip the thing off.
+    const todayISOForRange = window.isoDate(window.getEasternToday());
+    const now = new Date();
+    if (days.some((d) => window.isoDate(d) === todayISOForRange)) {
+      const nowHour = now.getHours() + now.getMinutes() / 60;
+      startHour = Math.min(startHour, Math.floor(nowHour));
+      endHour = Math.max(endHour, Math.ceil(nowHour));
+    }
+
     const totalHeight = (endHour - startHour) * PX_PER_HOUR;
 
     const wrap = document.createElement("div");
@@ -310,9 +344,19 @@
     body.appendChild(hours);
 
     timedByDay.forEach((dayTimed, i) => {
+      const isToday = window.isoDate(days[i]) === todayISO;
       const col = document.createElement("div");
-      col.className = "time-grid-col" + (window.isoDate(days[i]) === todayISO ? " today" : "");
+      col.className = "time-grid-col" + (isToday ? " today" : "");
       col.style.height = `${totalHeight}px`;
+
+      if (isToday) {
+        const line = document.createElement("div");
+        line.className = "time-grid-now-line";
+        line.appendChild(document.createElement("div")).className = "time-grid-now-dot";
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        line.style.top = `${((nowMin - startHour * 60) / 60) * PX_PER_HOUR}px`;
+        col.appendChild(line);
+      }
 
       const laidOut = layoutOverlaps(dayTimed);
       laidOut.forEach((item) => {
