@@ -270,6 +270,15 @@ async def ensure_checkbox_checked(scope, name_regex):
     except: pass
     await scope.get_by_text(name_regex).first.click(force=True)
 
+async def _is_checkbox_checked(scope, name_regex) -> bool:
+    host = scope.locator("mat-checkbox").filter(has=scope.get_by_text(name_regex)).first
+    try:
+        if await host.count():
+            classes = (await host.get_attribute("class")) or ""
+            return "mat-checkbox-checked" in classes
+    except: pass
+    return False
+
 async def find_filters_scope(page):
     try:
         await page.get_by_text(_rx_exact("Grad. Year")).first.wait_for(timeout=1200); return page
@@ -295,7 +304,15 @@ async def apply_filters(scope, grad_years: Optional[List[str]], statuses: Option
     if statuses:
         await _click_link_in_section(scope, _rx_exact("Status"), _rx_exact("none"))
         for s in statuses:
-            await ensure_checkbox_checked(scope, _rx_exact(s))
+            rx_s = _rx_exact(s)
+            await ensure_checkbox_checked(scope, rx_s)
+            if not await _is_checkbox_checked(scope, rx_s):
+                await ensure_checkbox_checked(scope, rx_s)  # retry once
+            if not await _is_checkbox_checked(scope, rx_s):
+                raise RuntimeError(
+                    f"Status filter: could not check '{s}' after retry — not found on ARMS "
+                    f"or the click didn't register. Aborting rather than exporting with it silently missing."
+                )
     else:
         await _click_link_in_section(scope, _rx_exact("Status"), _rx_exact("all"))
 
@@ -305,6 +322,24 @@ async def apply_filters(scope, grad_years: Optional[List[str]], statuses: Option
             rx_year = _rx_startswith(grad_year)
             await _scroll_until_visible(scope, rx_year)
             await ensure_checkbox_checked(scope, rx_year)
+            if not await _is_checkbox_checked(scope, rx_year):
+                # Retry once: virtual-scroll lists can reset/reflow scroll position
+                # right after a click, so re-search from the top instead of assuming
+                # the year doesn't exist.
+                try:
+                    container = scope.locator(
+                        ".mat-drawer-content, .mat-sidenav-content, .cdk-virtual-scroll-viewport"
+                    ).first
+                    await container.evaluate("(el)=>el.scrollTo(0,0)")
+                except: pass
+                await asyncio.sleep(0.2)
+                await _scroll_until_visible(scope, rx_year)
+                await ensure_checkbox_checked(scope, rx_year)
+            if not await _is_checkbox_checked(scope, rx_year):
+                raise RuntimeError(
+                    f"Grad. Year filter: could not check '{grad_year}' after retry — not found on ARMS "
+                    f"or the click didn't register. Aborting rather than exporting with it silently missing."
+                )
 
 def add_social_urls(df: pd.DataFrame) -> pd.DataFrame:
     if "Twitter" in df.columns:
@@ -750,10 +785,11 @@ async def do_one_export(page, exp: Dict):
     await click_recruiting_recruits(page)
 
     scope = await find_filters_scope(page)
-    try:
-        await apply_filters(scope, grad_years, _parse_statuses(exp))
-    except Exception as e:
-        print(f"[warn] filter step issue: {e}")
+    # Deliberately not caught here: a filter that silently failed to apply
+    # would otherwise export (and upsert) an incomplete dataset with no
+    # visible error. Let it propagate so the whole export is skipped — the
+    # caller's per-export try/except in run() reports it as [error].
+    await apply_filters(scope, grad_years, _parse_statuses(exp))
 
     try:
         await open_right_kebab_and_click_export(page)
