@@ -10,7 +10,12 @@
 -- join below (and the site) never needs to know the real table name.
 --
 -- `player_arms_match` joins current_players against arms in three passes:
---   1. Exact match on normalized full name + grad year.
+--   1. Exact match on normalized full name + grad year. `arms` no longer
+--      guarantees (grad_year, full_name) is unique — two different
+--      recruits can share a name in the same class (see arms.sql) — so
+--      this tier also requires exactly one candidate, same as tiers 2/3;
+--      an ambiguous exact match falls through to them instead of
+--      returning duplicate rows for the player.
 --   2. Exact match on normalized full name ALONE (grad year ignored) —
 --      catches cases where our roster and ARMS disagree on someone's grad
 --      year (e.g. a player listed as 2028 here but 2027 in ARMS) — but
@@ -37,7 +42,10 @@
 create or replace view public.player_arms_match
 with (security_invoker = true) as
 with exact_matches as (
-  select p.id as player_id, a.id as arms_id
+  select
+    p.id as player_id,
+    a.id as arms_id,
+    count(*) over (partition by p.id) as candidate_count
   from public.current_players p
   join public.arms a
     on lower(trim(a.full_name)) = lower(trim(p.full_name))
@@ -51,7 +59,9 @@ name_only_candidates as (
   from public.current_players p
   join public.arms a
     on lower(trim(a.full_name)) = lower(trim(p.full_name))
-  where not exists (select 1 from exact_matches e where e.player_id = p.id)
+  where not exists (
+    select 1 from exact_matches e where e.player_id = p.id and e.candidate_count = 1
+  )
 ),
 fuzzy_candidates as (
   select
@@ -66,10 +76,12 @@ fuzzy_candidates as (
     and a.data ->> 'Mobile Phone' is not null
     and regexp_replace(p.mobile_phone, '[^0-9]', '', 'g')
       = regexp_replace(a.data ->> 'Mobile Phone', '[^0-9]', '', 'g')
-  where not exists (select 1 from exact_matches e where e.player_id = p.id)
+  where not exists (
+    select 1 from exact_matches e where e.player_id = p.id and e.candidate_count = 1
+  )
 ),
 matches as (
-  select player_id, arms_id from exact_matches
+  select player_id, arms_id from exact_matches where candidate_count = 1
   union all
   select player_id, arms_id from name_only_candidates where candidate_count = 1
   union all

@@ -56,20 +56,42 @@ _sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 def ensure_arms_table():
     """Idempotent: mirrors sql/arms.sql. Lets this script bootstrap a fresh
-    Supabase project on its own, same as sql/arms.sql run by hand."""
+    Supabase project on its own, same as sql/arms.sql run by hand.
+
+    Also migrates a table created before arms_id existed: two different
+    recruits can share the same (grad_year, full_name) — that used to be
+    the unique key, so one silently overwrote the other on every sync.
+    arms_id (ARMS's own per-recruit `'ID` field) is the real unique key
+    now; grad_year/full_name stay as plain, non-unique join columns."""
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute("""
                 create table if not exists public.arms (
                   id uuid primary key default gen_random_uuid(),
+                  arms_id text not null,
                   grad_year text not null,
                   full_name text not null,
                   data jsonb not null default '{}'::jsonb,
                   source_export text,
                   synced_at timestamptz not null default now(),
-                  unique (grad_year, full_name)
+                  unique (arms_id)
                 );
+            """)
+            cur.execute("alter table public.arms add column if not exists arms_id text;")
+            cur.execute("update public.arms set arms_id = data->>$$'ID$$ where arms_id is null;")
+            cur.execute("alter table public.arms alter column arms_id set not null;")
+            cur.execute("alter table public.arms drop constraint if exists arms_grad_year_full_name_key;")
+            cur.execute("""
+                do $do$
+                begin
+                  if not exists (
+                    select 1 from pg_constraint
+                    where conrelid = 'public.arms'::regclass and conname = 'arms_arms_id_key'
+                  ) then
+                    alter table public.arms add constraint arms_arms_id_key unique (arms_id);
+                  end if;
+                end $do$;
             """)
             cur.execute("""
                 create index if not exists arms_full_name_normalized_idx
@@ -85,33 +107,49 @@ def ensure_arms_table():
         conn.close()
 
 
+def _find_id_column(df: pd.DataFrame) -> str:
+    """ARMS's own per-recruit ID column. Exported header is `'ID` (a
+    leading apostrophe — likely ARMS forcing text formatting in Excel),
+    so match on the stripped/normalized name rather than hardcoding that
+    exact string in case ARMS changes the casing or quoting."""
+    for col in df.columns:
+        if col.strip().strip("'\"").strip().upper() == "ID":
+            return col
+    raise RuntimeError("Export has no 'ID' column — can't key rows for Supabase upsert.")
+
 def upsert_arms_rows(df: pd.DataFrame, source_export: str):
     """
     Writes each row of the export into the `arms` table as:
-      grad_year, full_name, data (the full row as JSON), source_export, synced_at
+      arms_id, grad_year, full_name, data (the full row as JSON), source_export, synced_at
     `grad_year` comes from the export's own "Grad. Year" column (added so a
     single combined export covering multiple grad years can still be tagged
     correctly per row) — NOT from which filter checkbox was used to pull
     the export, since a combined export can contain more than one year.
     `data` keeps every column ARMS gave us, since the exact CSV columns
     depend on the export layout ARMS is configured with and aren't hardcoded
-    here. Upserts on (grad_year, full_name) — the natural key available from
-    this export; revisit if ARMS exposes a stabler per-recruit id later.
-    `full_name` is also what `players` joins against (sql/players.sql).
+    here. Upserts on `arms_id` — ARMS's own per-recruit ID — NOT
+    (grad_year, full_name): two different recruits can share the same name
+    in the same grad year (confirmed happening ~15-20 times per class),
+    and keying on the name used to silently collapse them into one row.
+    `full_name`/`grad_year` are kept as plain columns since `players` still
+    joins against them by name (sql/players.sql), just no longer unique.
     """
     if "Full Name" not in df.columns:
         raise RuntimeError("Export has no 'Full Name' column — can't key rows for Supabase upsert.")
     if "Grad. Year" not in df.columns:
         raise RuntimeError("Export has no 'Grad. Year' column — add it to the ARMS export layout.")
+    id_col = _find_id_column(df)
 
-    # Keyed by (grad_year, full_name) so a duplicate row later in the export
-    # overwrites the earlier one instead of both landing in the same
-    # upsert batch — Postgres's ON CONFLICT DO UPDATE errors
-    # ("cannot affect row a second time") if two rows in one batch target
-    # the same conflict key.
+    # Keyed by arms_id so a duplicate row later in the export overwrites the
+    # earlier one instead of both landing in the same upsert batch —
+    # Postgres's ON CONFLICT DO UPDATE errors ("cannot affect row a second
+    # time") if two rows in one batch target the same conflict key. Unlike
+    # the old (grad_year, full_name) key, a true duplicate here means the
+    # same recruit really did appear twice in the export.
     records_by_key = {}
     dupes = 0
     missing_grad_year = 0
+    missing_id = 0
     for _, row in df.iterrows():
         full_name = str(row.get("Full Name", "")).strip()
         if not full_name:
@@ -120,10 +158,14 @@ def upsert_arms_rows(df: pd.DataFrame, source_export: str):
         if not grad_year:
             missing_grad_year += 1
             continue
-        key = (grad_year, full_name)
-        if key in records_by_key:
+        arms_id = str(row.get(id_col, "")).strip().lstrip("'")
+        if not arms_id:
+            missing_id += 1
+            continue
+        if arms_id in records_by_key:
             dupes += 1
-        records_by_key[key] = {
+        records_by_key[arms_id] = {
+            "arms_id": arms_id,
             "grad_year": grad_year,
             "full_name": full_name,
             "data": json.loads(row.to_json()),
@@ -131,15 +173,17 @@ def upsert_arms_rows(df: pd.DataFrame, source_export: str):
         }
 
     if dupes:
-        print(f"[warn] {dupes} duplicate (grad_year, full_name) rows in export — kept the last one for each.")
+        print(f"[warn] {dupes} duplicate arms_id rows in export — kept the last one for each.")
     if missing_grad_year:
         print(f"[warn] {missing_grad_year} rows had no Grad. Year value — skipped.")
+    if missing_id:
+        print(f"[warn] {missing_id} rows had no ID value — skipped.")
 
     records = list(records_by_key.values())
     if not records:
         return 0
 
-    _sb.table("arms").upsert(records, on_conflict="grad_year,full_name").execute()
+    _sb.table("arms").upsert(records, on_conflict="arms_id").execute()
     return len(records)
 
 # ===================== UTILS / CACHE =====================
