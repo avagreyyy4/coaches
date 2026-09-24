@@ -1,7 +1,7 @@
 -- Run this in the Supabase SQL editor, alongside schema.sql and players.sql.
 --
--- Holds the full ARMS export (grad year 2028, all recruits ARMS knows
--- about) pulled monthly by scripts/fetch_and_push.py. This is NOT the list
+-- Holds the full ARMS export (grad years 2027-2030, all recruits ARMS
+-- knows about) pulled daily by scripts/fetch_and_push.py. This is NOT the list
 -- of players a coach is actually tracking — that's `players` (see
 -- players.sql). `arms` gets joined against `players` by full name so a
 -- tracked player's row can be enriched with whatever ARMS has on them.

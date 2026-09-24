@@ -8,11 +8,10 @@
 #      full ARMS export; it's separate from `players`, the roster coaches
 #      actually track, which gets manually entered and joined against
 #      `arms` by full name (see sql/players.sql).
-#   2. config.json pulls both grad year 2028 and 2027 (the roster spans
-#      both), not just 2027 like the original script.
+#   2. config.json pulls grad years 2027-2030 (the roster spans all four),
+#      not just 2027 like the original script.
 # Everything else (ARMS login, navigation, export/download, data cleanup) is
-# unchanged from the original. Runs monthly (see .github/workflows), since
-# ARMS data doesn't need to be pulled daily.
+# unchanged from the original. Runs daily (see .github/workflows).
 
 import asyncio, json, os, re, sys, tempfile
 from pathlib import Path

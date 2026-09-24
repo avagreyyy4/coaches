@@ -1,12 +1,18 @@
-name: ARMS Monthly Export (Supabase)
+name: ARMS Daily Export (Supabase)
 
 on:
   schedule:
-    - cron: "0 7 1 * *" # 7am UTC on the 1st of every month
+    # GitHub Actions cron is UTC-only, and 3am Eastern shifts with DST —
+    # split across two schedules so it lands on 3am ET either way. Offset
+    # from the 1am ET nightly-queue job so the two never overlap. The
+    # ~1-week window around the actual DST changeover (early Nov / mid Mar)
+    # will be off by an hour; not worth cron-level precision for this.
+    - cron: "0 7 * 3-10 *"      # 3am EDT (UTC-4), Mar–Oct
+    - cron: "0 8 * 11,12,1,2 *" # 3am EST (UTC-5), Nov–Feb
   workflow_dispatch: # lets you trigger a run manually any time (e.g. today)
 
 concurrency:
-  group: arms-monthly-supabase
+  group: arms-daily-supabase
   cancel-in-progress: false
 
 jobs:

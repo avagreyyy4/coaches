@@ -1,13 +1,13 @@
 {
   "exports": [
     {
-      "name": "Full_Contact_2027_2028",
-      "label": "Raw_Full_Contact_27_28",
+      "name": "Full_Contact_2027_2030",
+      "label": "Raw_Full_Contact_27_30",
       "filters": {
-        "gradYear": { "type": "checkbox", "selector": ["2027", "2028"] },
-        "status": { "values": ["Prospect", "New"] }
+        "gradYear": { "type": "checkbox", "selector": ["2027", "2028", "2029", "2030"] },
+        "status": { "values": ["Prospect", "New", "Camper"] }
       },
-      "export": { "layoutOptionText": "2028 Full Info" }
+      "export": { "layoutOptionText": "Database Full Info" }
     }
   ]
 }
