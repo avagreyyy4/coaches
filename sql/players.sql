@@ -109,12 +109,17 @@ select
   a.synced_at as arms_synced_at,
   (a.id is not null) as matched_in_arms,
   p.sort_order,
-  -- ARMS says this recruit is out (ACS Rank Dropped / NFU / GradesLow).
-  -- The site, season progress and the nightly queue all skip these, and
-  -- it's re-evaluated live from `arms`, so it flips whenever the daily ARMS
-  -- export changes someone's rank. Unmatched players are never removed.
-  coalesce(lower(trim(a.data ->> 'ACS Rank')) in ('dropped', 'nfu', 'gradeslow'), false)
-    as arms_removed
+  -- Out of the pool: ACS Rank Dropped / NFU / GradesLow, judged from ARMS
+  -- when the player matched there, AND from the roster's own rank (which
+  -- scripts/sync_roster_from_arms.py keeps in step with ARMS) so a player
+  -- ARMS can't match by name still gets caught. Spaces/case are ignored.
+  -- The site, season progress and the nightly queue all skip these; it's
+  -- re-evaluated live, so it flips whenever a new ARMS export changes
+  -- someone's rank.
+  (
+    replace(lower(coalesce(a.data ->> 'ACS Rank', '')), ' ', '') in ('dropped', 'nfu', 'gradeslow')
+    or replace(lower(coalesce(p.acs_rank, '')), ' ', '') in ('dropped', 'nfu', 'gradeslow')
+  ) as arms_removed
 from public.current_players p
 left join matches m on m.player_id = p.id
 left join public.arms a on a.id = m.arms_id;
