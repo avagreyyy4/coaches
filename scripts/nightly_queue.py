@@ -13,6 +13,9 @@
 #      leftover. Keep DAILY_QUOTA here in sync with js/data.js's copy —
 #      they're separate runtimes with no shared source of truth.
 #
+# Players ARMS has marked out (ACS Rank Dropped / NFU / GradesLow — the
+# arms_removed flag on player_arms_match) are never counted or activated.
+#
 # Reads/writes through the `current_players` view, so it always lands on
 # whichever month's table scripts/import_players.py last pointed it at.
 # Local-safe to run manually (DATABASE_URL only, no ARMS/Google creds
@@ -44,8 +47,9 @@ def main():
 
             for coach in COACHES:
                 cur.execute("""
-                    select count(*) from current_players
-                    where assigned_coach = %s and queue_status = 'active';
+                    select count(*) from player_arms_match
+                    where assigned_coach = %s and queue_status = 'active'
+                      and not arms_removed;
                 """, (coach,))
                 carried_over = cur.fetchone()[0]
 
@@ -53,8 +57,9 @@ def main():
                     update current_players
                     set queue_status = 'active', activated_at = now()
                     where id in (
-                      select id from current_players
+                      select player_id from player_arms_match
                       where assigned_coach = %s and queue_status = 'pending'
+                        and not arms_removed
                       order by sort_order
                       limit %s
                     );

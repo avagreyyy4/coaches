@@ -519,6 +519,41 @@
         info.appendChild(missing);
       }
 
+      const noteWrap = document.createElement("div");
+      noteWrap.className = "recruit-note";
+      const noteBox = document.createElement("textarea");
+      noteBox.rows = 2;
+      noteBox.maxLength = 1000;
+      noteBox.placeholder = "Notes";
+      noteBox.value = recruit.note;
+      noteBox.setAttribute("aria-label", `Notes for ${recruit.firstName} ${recruit.lastName}`);
+      const noteStatus = document.createElement("span");
+      noteStatus.className = "recruit-note-status";
+      noteStatus.setAttribute("aria-live", "polite");
+      noteWrap.appendChild(noteBox);
+      noteWrap.appendChild(noteStatus);
+
+      // Save shortly after typing stops, and immediately on blur.
+      let saveTimer = null;
+      let lastSaved = recruit.note;
+      const saveNote = async () => {
+        clearTimeout(saveTimer);
+        const value = noteBox.value;
+        if (value === lastSaved) return;
+        noteStatus.textContent = "Saving…";
+        const ok = await window.setPlayerNote(recruit.noteKey, value);
+        if (ok) lastSaved = value;
+        noteStatus.textContent = ok ? "Saved" : "Not saved — retry";
+      };
+      noteBox.addEventListener("input", () => {
+        noteStatus.textContent = "";
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveNote, 800);
+      });
+      noteBox.addEventListener("blur", saveNote);
+
+      info.appendChild(noteWrap);
+
       row.appendChild(checkbox);
       row.appendChild(info);
       list.appendChild(row);

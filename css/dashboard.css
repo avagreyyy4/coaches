@@ -597,6 +597,34 @@
 .recruit-missing { font-size: 0.78rem; color: var(--flag); margin-top: 0.2rem; }
 .recruit-missing-label { color: var(--flag); font-weight: 700; }
 
+.recruit-note { margin-top: 0.5rem; cursor: default; }
+.recruit-note textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--gray-900);
+  background: #fff;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.5rem;
+  resize: vertical;
+  min-height: 2.6rem;
+}
+.recruit-note textarea:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 1px;
+}
+.recruit-note-status {
+  display: block;
+  min-height: 1rem;
+  font-size: 0.72rem;
+  color: var(--gray-500);
+  margin-top: 0.15rem;
+}
+
 .recruit-row.done .recruit-name {
   color: var(--gray-500);
   text-decoration: line-through;

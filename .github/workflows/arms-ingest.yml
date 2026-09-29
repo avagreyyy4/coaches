@@ -2,13 +2,12 @@ name: ARMS Daily Export (Supabase)
 
 on:
   schedule:
-    # GitHub Actions cron is UTC-only, and 3am Eastern shifts with DST —
-    # split across two schedules so it lands on 3am ET either way. Offset
-    # from the 1am ET nightly-queue job so the two never overlap. The
-    # ~1-week window around the actual DST changeover (early Nov / mid Mar)
-    # will be off by an hour; not worth cron-level precision for this.
-    - cron: "0 7 * 3-10 *"      # 3am EDT (UTC-4), Mar–Oct
-    - cron: "0 8 * 11,12,1,2 *" # 3am EST (UTC-5), Nov–Feb
+    # Every 6 hours, so a recruit ARMS marks Dropped / NFU / GradesLow
+    # disappears from the coach lists within hours (the site reads that
+    # straight off the synced `arms` table). Cron is UTC-only, so this is
+    # deliberately DST-agnostic; :30 keeps it clear of the 1am ET
+    # nightly-queue job.
+    - cron: "30 */6 * * *"
   workflow_dispatch: # lets you trigger a run manually any time (e.g. today)
 
 concurrency:

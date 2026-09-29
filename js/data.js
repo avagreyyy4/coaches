@@ -29,12 +29,45 @@
     return missing;
   }
 
+  // Notes are shared across coaches and keyed by normalized full name so
+  // they survive the monthly roster tables (see sql/player_notes.sql).
+  function noteKey(fullName) {
+    return (fullName || "").trim().toLowerCase();
+  }
+
+  async function loadNotes(keys) {
+    if (!keys.length) return {};
+    const { data, error } = await window.supabaseClient
+      .from("player_notes")
+      .select("player_key,note")
+      .in("player_key", keys);
+    if (error) {
+      console.error("[data] failed to load notes:", error.message);
+      return {};
+    }
+    return Object.fromEntries(data.map((r) => [r.player_key, r.note]));
+  }
+
+  // Returns true if the save landed.
+  window.setPlayerNote = async function (key, note) {
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    const { error } = await window.supabaseClient.from("player_notes").upsert({
+      player_key: key,
+      note,
+      updated_by: session && session.user ? session.user.email : null,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) console.error("[data] failed to save note:", error.message);
+    return !error;
+  };
+
   window.getCoachDashboardData = async function (coachId) {
     const { data, error } = await window.supabaseClient
       .from("player_arms_match")
       .select("*")
       .eq("assigned_coach", coachId)
       .eq("queue_status", "active")
+      .eq("arms_removed", false)
       .order("sort_order", { ascending: true });
 
     if (error) {
@@ -42,8 +75,12 @@
       return { todayTarget: 0, todayDone: 0, recruits: [] };
     }
 
+    const notes = await loadNotes(data.map((row) => noteKey(row.full_name)));
+
     const recruits = data.map((row) => ({
       id: row.player_id,
+      note: notes[noteKey(row.full_name)] || "",
+      noteKey: noteKey(row.full_name),
       firstName: row.first_name,
       lastName: row.last_name,
       gradYear: row.grad_year,
@@ -74,12 +111,16 @@
   // the same player once, so this number doesn't jump when the sweep runs
   // — it just becomes durable.
   window.getSeasonProgress = async function () {
+    // Read through player_arms_match so players ARMS has marked out
+    // (Dropped / NFU / GradesLow) don't count toward either number.
     const totalReq = window.supabaseClient
-      .from("current_players")
-      .select("*", { count: "exact", head: true });
-    const contactedReq = window.supabaseClient
-      .from("current_players")
+      .from("player_arms_match")
       .select("*", { count: "exact", head: true })
+      .eq("arms_removed", false);
+    const contactedReq = window.supabaseClient
+      .from("player_arms_match")
+      .select("*", { count: "exact", head: true })
+      .eq("arms_removed", false)
       .or("queue_status.eq.contacted,and(queue_status.eq.active,checked.eq.true)");
 
     const [{ count: total, error: totalErr }, { count: contacted, error: contactedErr }] =

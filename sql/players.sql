@@ -32,6 +32,9 @@
 --      "Layla Davis" vs "London Davis" for a player named "Lily Davis") —
 --      an exact phone match is what makes it a confirmed identity, not a
 --      guess.
+-- Players whose ARMS ACS Rank is Dropped / NFU / GradesLow come back with
+-- arms_removed = true; consumers filter on it (see js/data.js and
+-- scripts/nightly_queue.py).
 -- A player with more than one candidate at either fallback tier is left
 -- unmatched rather than picking one arbitrarily.
 --
@@ -105,7 +108,13 @@ select
   a.data as arms_data,
   a.synced_at as arms_synced_at,
   (a.id is not null) as matched_in_arms,
-  p.sort_order
+  p.sort_order,
+  -- ARMS says this recruit is out (ACS Rank Dropped / NFU / GradesLow).
+  -- The site, season progress and the nightly queue all skip these, and
+  -- it's re-evaluated live from `arms`, so it flips whenever the daily ARMS
+  -- export changes someone's rank. Unmatched players are never removed.
+  coalesce(lower(trim(a.data ->> 'ACS Rank')) in ('dropped', 'nfu', 'gradeslow'), false)
+    as arms_removed
 from public.current_players p
 left join matches m on m.player_id = p.id
 left join public.arms a on a.id = m.arms_id;
