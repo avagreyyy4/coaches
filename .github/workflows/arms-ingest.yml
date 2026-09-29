@@ -48,7 +48,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python fetch_and_push.py
 
-      - name: Sync ACS rank / phone from ARMS onto the roster
+      - name: Sync ACS rank from ARMS onto the roster
         working-directory: scripts
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
