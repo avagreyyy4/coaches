@@ -49,11 +49,17 @@ GOOGLE_CALENDAR_SA_JSON = os.getenv("GOOGLE_CALENDAR_SA_JSON")
 # *_CALENDAR_ID (+ GOOGLE_CALENDAR_SA_JSON) for each.
 CALENDAR_LABELS = ["Staff", "WBB"]
 
+# Labels that only ever use the Calendar ID path, even if an iCal URL is also
+# configured. Staff syncing via both stored two sets of rows (different
+# calendar_ids) and showed every event twice.
+API_ONLY_LABELS = {"Staff"}
+
 # label -> secret iCal feed URL
 ICAL_SOURCES = {
     label: url
     for label in CALENDAR_LABELS
-    if (url := os.getenv(f"{label.upper()}_CALENDAR_ICAL_URL"))
+    if label not in API_ONLY_LABELS
+    and (url := os.getenv(f"{label.upper()}_CALENDAR_ICAL_URL"))
 }
 
 # label -> Calendar ID (service-account path). Skipped for any label already
