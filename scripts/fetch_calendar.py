@@ -332,12 +332,29 @@ def upsert_events(records):
     return len(records)
 
 
+def prune_stale_sources(records):
+    """Deletes rows for a synced label whose calendar_id isn't one we just
+    fetched from. Earlier runs stored Staff events under the Google calendar
+    id; once we switched to iCal-only, those rows were never overwritten and
+    kept showing as duplicates. Only runs for labels that returned records,
+    so a failed/empty fetch can't wipe a calendar."""
+    current = {}
+    for r in records:
+        current.setdefault(r["calendar_name"], set()).add(r["calendar_id"])
+    for label, keep in current.items():
+        _sb.table("calendar_events").delete() \
+            .eq("calendar_name", label) \
+            .not_.in_("calendar_id", sorted(keep)).execute()
+
+
 def main():
     if "--diagnose" in sys.argv:
         diagnose()
         return
     ensure_calendar_events_table()
-    records = upsert_events(fetch_events())
+    fetched = fetch_events()
+    records = upsert_events(fetched)
+    prune_stale_sources(fetched)
     labels = sorted(set(ICAL_SOURCES) | set(API_SOURCES))
     print(f"[info] upserted {records:,} calendar_events rows from: {', '.join(labels)}")
 
