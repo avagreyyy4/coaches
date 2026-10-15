@@ -97,6 +97,28 @@
     };
   };
 
+  // Every recruit assigned to this coach who is still in the pool (not just
+  // today's list), for the Export button. "Called" matches the season
+  // progress rule: swept to contacted, or checked today and awaiting the sweep.
+  window.getCoachExportRows = async function (coachId) {
+    const { data, error } = await window.supabaseClient
+      .from("player_arms_match")
+      .select("full_name,mobile_phone,acs_rank,queue_status,checked,sort_order")
+      .eq("assigned_coach", coachId)
+      .eq("arms_removed", false)
+      .order("sort_order", { ascending: true });
+    if (error) {
+      console.error("[data] failed to load export rows:", error.message);
+      return null;
+    }
+    return data.map((row) => ({
+      name: row.full_name,
+      phone: row.mobile_phone || "",
+      acsRank: row.acs_rank || "",
+      called: row.queue_status === "contacted" || (row.queue_status === "active" && row.checked),
+    }));
+  };
+
   // playerId is the real current_players row id (a uuid), not a list index.
   window.setRecruitDone = async function (coachId, playerId, done) {
     const { error } = await window.supabaseClient

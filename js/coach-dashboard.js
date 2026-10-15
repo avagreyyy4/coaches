@@ -40,6 +40,35 @@
     renderRecruits(data);
   }
 
+  // ---- Export: CSV of every recruit assigned to this coach ----
+  function csvCell(v) {
+    const s = String(v);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  const exportBtn = document.getElementById("export-btn");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", async () => {
+      exportBtn.disabled = true;
+      const rows = await window.getCoachExportRows(coach.id);
+      exportBtn.disabled = false;
+      if (!rows) {
+        alert("Couldn't load recruits to export. Please try again.");
+        return;
+      }
+      const lines = [["Full Name", "Phone Number", "ACS Rank", "Called"]]
+        .concat(rows.map((r) => [r.name, r.phone, r.acsRank, r.called ? "Yes" : "No"]))
+        .map((cols) => cols.map(csvCell).join(","));
+      const blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${coach.name}-recruits-${window.isoDate(window.getEasternToday())}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+    });
+  }
+
   // ---- Calendar: toolbar wiring ----
   document.getElementById("cal-prev").addEventListener("click", () => {
     shiftAnchor(-1);

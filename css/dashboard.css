@@ -153,6 +153,22 @@
   padding: 1.1rem 1.5rem;
   box-shadow: 0 14px 32px -14px rgba(29, 46, 91, 0.4);
 }
+.coach-header { justify-content: space-between; gap: 1rem; }
+.export-btn {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  min-height: 44px;
+  padding: 0 1.25rem;
+  background: transparent;
+  color: var(--columbia-blue);
+  border: 1px solid var(--columbia-blue);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.export-btn:hover { background: var(--columbia-blue); color: var(--navy-deep); }
+.export-btn:focus-visible { outline: 2px solid var(--white); outline-offset: 2px; }
+.export-btn:disabled { opacity: 0.6; cursor: wait; }
 .coach-header h1 {
   font-family: var(--font-display);
   font-weight: 500;
