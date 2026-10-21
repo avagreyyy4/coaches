@@ -613,6 +613,23 @@
 .recruit-missing { font-size: 0.78rem; color: var(--flag); margin-top: 0.2rem; }
 .recruit-missing-label { color: var(--flag); font-weight: 700; }
 
+.recruit-texted {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  cursor: pointer;
+}
+.recruit-row .recruit-texted input[type="checkbox"] {
+  margin-top: 0;
+  width: 0.95rem;
+  height: 0.95rem;
+}
+.recruit-texted-status { color: var(--flag); }
+
 .recruit-note { margin-top: 0.5rem; cursor: default; }
 .recruit-note textarea {
   display: block;

@@ -548,6 +548,42 @@
         info.appendChild(missing);
       }
 
+      // Shared mental note: has anyone texted this recruit? Independent of
+      // the reached-out checkbox; never removes the recruit from the list.
+      const textedWrap = document.createElement("div");
+      textedWrap.className = "recruit-texted";
+      const textedBox = document.createElement("input");
+      textedBox.type = "checkbox";
+      textedBox.checked = recruit.texted;
+      const textedLabel = document.createElement("span");
+      textedLabel.textContent = "Texted";
+      const textedStatus = document.createElement("span");
+      textedStatus.className = "recruit-texted-status";
+      textedStatus.setAttribute("aria-live", "polite");
+      textedBox.addEventListener("change", async () => {
+        const want = textedBox.checked;
+        const ok = await window.setPlayerTexted(recruit.noteKey, want);
+        if (ok) {
+          recruit.texted = want;
+          textedStatus.textContent = "";
+        } else {
+          textedBox.checked = !want;
+          textedStatus.textContent = "Not saved — retry";
+        }
+      });
+      // Not a <label>: nested inside the row's label it would also toggle
+      // the reached-out checkbox. Forward text clicks to our own box instead.
+      textedWrap.addEventListener("click", (e) => {
+        if (e.target === textedBox) return;
+        e.preventDefault();
+        textedBox.click();
+      });
+      textedBox.setAttribute("aria-label", `Texted ${recruit.firstName} ${recruit.lastName}`);
+      textedWrap.appendChild(textedBox);
+      textedWrap.appendChild(textedLabel);
+      textedWrap.appendChild(textedStatus);
+      info.appendChild(textedWrap);
+
       const noteWrap = document.createElement("div");
       noteWrap.className = "recruit-note";
       const noteBox = document.createElement("textarea");

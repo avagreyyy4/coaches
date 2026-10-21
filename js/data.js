@@ -61,6 +61,34 @@
     return !error;
   };
 
+  // Shared "texted" flag, same keying as notes. Purely informational: it
+  // never touches checked/queue_status. Returns { key: { texted, by } }.
+  async function loadTexted(keys) {
+    if (!keys.length) return {};
+    const { data, error } = await window.supabaseClient
+      .from("player_texted")
+      .select("player_key,texted,updated_by")
+      .in("player_key", keys);
+    if (error) {
+      console.error("[data] failed to load texted flags:", error.message);
+      return {};
+    }
+    return Object.fromEntries(data.map((r) => [r.player_key, { texted: r.texted, by: r.updated_by }]));
+  }
+
+  // Returns true if the save landed.
+  window.setPlayerTexted = async function (key, texted) {
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    const { error } = await window.supabaseClient.from("player_texted").upsert({
+      player_key: key,
+      texted,
+      updated_by: session && session.user ? session.user.email : null,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) console.error("[data] failed to save texted flag:", error.message);
+    return !error;
+  };
+
   window.getCoachDashboardData = async function (coachId) {
     const { data, error } = await window.supabaseClient
       .from("player_arms_match")
@@ -75,12 +103,15 @@
       return { todayTarget: 0, todayDone: 0, recruits: [] };
     }
 
-    const notes = await loadNotes(data.map((row) => noteKey(row.full_name)));
+    const keys = data.map((row) => noteKey(row.full_name));
+    const [notes, texted] = await Promise.all([loadNotes(keys), loadTexted(keys)]);
 
     const recruits = data.map((row) => ({
       id: row.player_id,
       note: notes[noteKey(row.full_name)] || "",
       noteKey: noteKey(row.full_name),
+      texted: !!(texted[noteKey(row.full_name)] || {}).texted,
+      textedBy: (texted[noteKey(row.full_name)] || {}).by || null,
       firstName: row.first_name,
       lastName: row.last_name,
       gradYear: row.grad_year,
